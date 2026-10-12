@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# varhop-fetch <git-url> <cache-dir> <repo-id> <account-id> <login> <generation>
+# Fetches the repo into the inactive clone slot, reads prompts/, writes the
+# bundle to <cache-dir>/staged-<generation>.json. Never touches library.json.
+set -u
+
+export GIT_TERMINAL_PROMPT=0 GH_PROMPT_DISABLED=1
+SCRUB=(env -u GH_TOKEN -u GITHUB_TOKEN -u GH_HOST -u GH_REPO)
+GIT_TIMEOUT=60
+
+err() { # err <class> <code> <message> [fix] [stderr]
+  jq -nc --arg e "$1" --arg m "$3" --arg f "${4:-}" --arg s "${5:-}" \
+    '{error:$e,message:$m,fix:(if $f=="" then null else $f end),stderr:$s}'
+  exit "$2"
+}
+
+code_for() {
+  case $1 in
+    usage) echo 2 ;; auth) echo 3 ;; not-found) echo 4 ;; identity-mismatch) echo 5 ;;
+    network) echo 6 ;; timeout) echo 7 ;; cache-io) echo 8 ;; not-staged) echo 9 ;;
+  esac
+}
+
+classify() { # classify <rc> <stderr> -> class name
+  local rc=$1 s=$2
+  if [ "$rc" -eq 124 ]; then echo timeout
+  elif [ "$rc" -eq 4 ] || grep -qiE 'gh auth login|not logged in|authentication' <<<"$s"; then echo auth
+  elif grep -qiE 'not found|HTTP 404' <<<"$s"; then echo not-found
+  else echo network; fi
+}
+
+GIT_OUT=""; GIT_RC=0; GIT_ERR=""
+git_call() {
+  local ef
+  ef=$(mktemp) || err cache-io "$(code_for cache-io)" "mktemp failed"
+  GIT_OUT=$("${SCRUB[@]}" timeout "$GIT_TIMEOUT" git \
+    -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+    "$@" 2>"$ef")
+  GIT_RC=$?
+  GIT_ERR=$(cat "$ef"); rm -f "$ef"
+}
+
+git_die() { # git_die <message>
+  local class
+  class=$(classify "$GIT_RC" "$GIT_ERR")
+  err "$class" "$(code_for "$class")" "$1" "" "$GIT_ERR"
+}
+
+[ $# -eq 6 ] || err usage 2 "usage: varhop-fetch <git-url> <cache-dir> <repo-id> <account-id> <login> <generation>"
+URL=$1; CACHE=$2; REPO_ID=$3; ACCOUNT_ID=$4; LOGIN=$5; GEN=$6
+for v in "$REPO_ID" "$ACCOUNT_ID" "$GEN"; do
+  [[ $v =~ ^[0-9]+$ ]] || err usage 2 "repo-id, account-id and generation must be numeric"
+done
+[ -n "$LOGIN" ] || err usage 2 "login must not be empty"
+[ -n "$URL" ] || err usage 2 "git url must not be empty"
+mkdir -p "$CACHE" || err cache-io "$(code_for cache-io)" "cannot create cache dir" "" "$CACHE"
+
+REPO_NAME=$(printf '%s\n' "$URL" | sed -nE 's#.*[:/]([^/]+/[^/]+?)(\.git)?$#\1#p')
+
+# Active slot is the one named in library.json; fetch refreshes the other.
+ACTIVE=a
+[ -f "$CACHE/library.json" ] && ACTIVE=$(jq -r '.slot // "a"' "$CACHE/library.json")
+[ "$ACTIVE" = "a" ] && SLOT=b || SLOT=a
+SLOTDIR=$CACHE/slot-$SLOT
+
+files_tmp=$(mktemp); errors_tmp=$(mktemp)
+trap 'rm -f "$files_tmp" "$errors_tmp"' EXIT
+
+emit() { # emit <status> <commit-or-empty>
+  local status=$1 commit=$2 fetched
+  fetched=$(date +%s%3N)
+  jq -nc \
+    --argjson generation "$GEN" --arg repo "$REPO_NAME" \
+    --argjson repoId "$REPO_ID" --argjson accountId "$ACCOUNT_ID" \
+    --arg login "$LOGIN" --arg commit "$commit" --argjson fetchedAt "$fetched" \
+    --arg status "$status" --arg slot "$SLOT" \
+    --slurpfile files "$files_tmp" --slurpfile errors "$errors_tmp" \
+    '{version:1,generation:$generation,repo:$repo,repoId:$repoId,accountId:$accountId,login:$login,commit:(if $commit=="" then null else $commit end),fetchedAt:$fetchedAt,status:$status,slot:$slot,files:$files,errors:$errors}' \
+    > "$CACHE/staged-tmp-$GEN.json" || err cache-io "$(code_for cache-io)" "cannot write staged temp bundle"
+  mv -f "$CACHE/staged-tmp-$GEN.json" "$CACHE/staged-$GEN.json" \
+    || err cache-io "$(code_for cache-io)" "cannot rename staged bundle"
+  jq -nc --arg status "$status" --arg login "$LOGIN" \
+    --argjson accountId "$ACCOUNT_ID" --arg repo "$REPO_NAME" --argjson repoId "$REPO_ID" \
+    --arg commit "$commit" --argjson fetchedAt "$fetched" --argjson generation "$GEN" \
+    --arg staged "$CACHE/staged-$GEN.json" \
+    '{status:$status,login:$login,accountId:$accountId,repo:$repo,repoId:$repoId,commit:(if $commit=="" then null else $commit end),fetchedAt:$fetchedAt,generation:$generation,staged:$staged}'
+  exit 0
+}
+
+# Empty remote: nothing to clone.
+git_call ls-remote "$URL" HEAD
+[ "$GIT_RC" -ne 0 ] && git_die "ls-remote failed"
+if [ -z "$GIT_OUT" ]; then
+  emit empty-repo ""
+fi
+
+# Refresh the inactive slot; reclone when it tracks another repo or is missing.
+NEED_CLONE=0
+[ -d "$SLOTDIR/.git" ] || NEED_CLONE=1
+if [ "$NEED_CLONE" -eq 0 ]; then
+  git_call -C "$SLOTDIR" config varhop.repoid
+  [ "$GIT_RC" -ne 0 ] || [ "$GIT_OUT" != "$REPO_ID" ] && NEED_CLONE=1
+fi
+if [ "$NEED_CLONE" -eq 1 ]; then
+  rm -rf "$SLOTDIR" || err cache-io "$(code_for cache-io)" "cannot remove stale slot" "" "$SLOTDIR"
+  git_call clone --depth 1 --no-checkout "$URL" "$SLOTDIR"
+  [ "$GIT_RC" -ne 0 ] && git_die "clone failed"
+fi
+
+# Neutralize checkout transforms on prompts/** before any checkout.
+GITDIR=$("${SCRUB[@]}" git -C "$SLOTDIR" rev-parse --git-dir) \
+  || err cache-io "$(code_for cache-io)" "cannot resolve git dir" "" "$SLOTDIR"
+case $GITDIR in /*) : ;; *) GITDIR=$SLOTDIR/$GITDIR ;; esac
+mkdir -p "$GITDIR/info" \
+  && printf 'prompts/** -text -filter -ident -working-tree-encoding\n' > "$GITDIR/info/attributes" \
+  || err cache-io "$(code_for cache-io)" "cannot write info/attributes"
+
+git_call -C "$SLOTDIR" fetch -q --depth 1 origin HEAD
+[ "$GIT_RC" -ne 0 ] && git_die "fetch failed"
+git_call -C "$SLOTDIR" reset -q --hard FETCH_HEAD
+[ "$GIT_RC" -ne 0 ] && git_die "checkout failed"
+git_call -C "$SLOTDIR" config varhop.repoid "$REPO_ID"
+[ "$GIT_RC" -ne 0 ] && git_die "recording repo id failed"
+git_call -C "$SLOTDIR" rev-parse HEAD
+[ "$GIT_RC" -ne 0 ] && git_die "rev-parse failed"
+COMMIT=$GIT_OUT
+
+if [ ! -d "$SLOTDIR/prompts" ]; then
+  emit no-prompts "$COMMIT"
+fi
+
+STATUS=ok
+while IFS= read -r -d '' f; do
+  rel=${f#"$SLOTDIR"/}
+  rest=${rel#prompts/}
+  slashes=$(tr -cd '/' <<<"$rest" | wc -c)
+  if [ "$slashes" -lt 1 ] || [ "$slashes" -gt 2 ]; then
+    jq -nc --arg p "$rel" '{path:$p,message:"unsupported layout, expected prompts/<category>/[<subcategory>/]<name>.md"}' >> "$errors_tmp"
+    continue
+  fi
+  if ! iconv -f UTF-8 -t UTF-8 "$f" >/dev/null 2>&1; then
+    jq -nc --arg p "$rel" '{path:$p,message:"invalid UTF-8"}' >> "$errors_tmp"
+    continue
+  fi
+  jq -nc --arg p "$rel" --rawfile t "$f" '{path:$p,text:$t}' >> "$files_tmp"
+done < <(find "$SLOTDIR/prompts" -type f -name '*.md' -print0 | sort -z)
+
+emit "$STATUS" "$COMMIT"

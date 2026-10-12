@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# varhop-sync <command> — GitHub front for the varhop prompt library.
+#   status | repos | repo <owner/repo> | accept <cache-dir> <n> |
+#   sync <owner/repo> <cache-dir> --generation <n> [--expect-account <id> --expect-repo <id>]
+set -u
+
+export GIT_TERMINAL_PROMPT=0 GH_PROMPT_DISABLED=1
+SCRUB=(env -u GH_TOKEN -u GITHUB_TOKEN -u GH_HOST -u GH_REPO)
+GH_TIMEOUT=15
+REPO_RE='^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9._-]{1,100}$'
+FETCH_BIN=$(dirname "$(readlink -f "$0")")/varhop-fetch
+
+err() { # err <class> <code> <message> [fix] [stderr]
+  jq -nc --arg e "$1" --arg m "$3" --arg f "${4:-}" --arg s "${5:-}" \
+    '{error:$e,message:$m,fix:(if $f=="" then null else $f end),stderr:$s}'
+  exit "$2"
+}
+
+errm() { # errm <code> <actual-account> <actual-repo> — identity-mismatch
+  jq -nc --argjson a "$2" --argjson r "$3" \
+    '{error:"identity-mismatch",message:"account or repo id differs from the stored selection",fix:null,stderr:"",actual:{accountId:$a,repoId:$r}}'
+  exit "$1"
+}
+
+code_for() {
+  case $1 in
+    usage) echo 2 ;; auth) echo 3 ;; not-found) echo 4 ;; identity-mismatch) echo 5 ;;
+    network) echo 6 ;; timeout) echo 7 ;; cache-io) echo 8 ;; not-staged) echo 9 ;;
+  esac
+}
+
+classify() {
+  local rc=$1 s=$2
+  if [ "$rc" -eq 124 ]; then echo timeout
+  elif [ "$rc" -eq 4 ] || grep -qiE 'gh auth login|not logged in|authentication' <<<"$s"; then echo auth
+  elif grep -qiE 'not found|HTTP 404' <<<"$s"; then echo not-found
+  else echo network; fi
+}
+
+GH_OUT=""; GH_RC=0; GH_ERR=""
+gh_call() {
+  local ef
+  ef=$(mktemp) || err cache-io "$(code_for cache-io)" "mktemp failed"
+  GH_OUT=$("${SCRUB[@]}" timeout "$GH_TIMEOUT" gh "$@" 2>"$ef")
+  GH_RC=$?
+  GH_ERR=$(cat "$ef"); rm -f "$ef"
+}
+
+gh_die() { # gh_die <message>
+  local class fix=""
+  class=$(classify "$GH_RC" "$GH_ERR")
+  [ "$class" = auth ] && fix="gh auth login"
+  err "$class" "$(code_for "$class")" "$1" "$fix" "$GH_ERR"
+}
+
+repo_arg_ok() { # repo_arg_ok <owner/repo>
+  local o=${1%%/*} r=${1##*/}
+  [[ $1 =~ $REPO_RE ]] || return 1
+  case $o in .|..) return 1 ;; esac
+  case $r in .|..) return 1 ;; esac
+  return 0
+}
+
+[ $# -ge 1 ] || err usage 2 "usage: varhop-sync <status|repos|repo|accept|sync> ..."
+CMD=$1; shift
+
+case $CMD in
+
+status)
+  gh_call auth status --json hosts
+  [ "$GH_RC" -eq 124 ] && err timeout 7 "gh auth status timed out" "" "$GH_ERR"
+  [ "$GH_RC" -ne 0 ] && gh_die "gh auth status failed"
+  HOST=$(jq -r '."github.com" // empty' <<<"$GH_OUT" 2>/dev/null)
+  if [ -z "$HOST" ]; then
+    jq -nc '{authenticated:false,fix:"gh auth login"}'
+    exit 0
+  fi
+  gh_call api user
+  [ "$GH_RC" -ne 0 ] && gh_die "gh api user failed"
+  LOGIN=$(jq -r '.login' <<<"$GH_OUT")
+  AID=$(jq -r '.id' <<<"$GH_OUT")
+  jq -nc --arg l "$LOGIN" --argjson a "$AID" --arg s "$(jq -r '.scopes // ""' <<<"$HOST")" \
+    '{authenticated:true,login:$l,accountId:$a,scopes:($s|split(", ")|map(select(.!="")))}'
+  ;;
+
+repos)
+  gh_call api '/user/repos?per_page=100' --paginate
+  [ "$GH_RC" -ne 0 ] && gh_die "listing repos failed"
+  jq -sc '{repos:[.[][]|{fullName:.full_name,id:.id,private:.private}]}' <<<"$GH_OUT"
+  ;;
+
+repo)
+  [ $# -eq 1 ] || err usage 2 "usage: varhop-sync repo <owner/repo>"
+  repo_arg_ok "$1" || err usage 2 "invalid owner/repo" "" "$1"
+  gh_call api "repos/$1"
+  [ "$GH_RC" -ne 0 ] && gh_die "repo lookup failed"
+  jq -c '{fullName:.full_name,id:.id,private:.private}' <<<"$GH_OUT"
+  ;;
+
+accept)
+  [ $# -eq 2 ] || err usage 2 "usage: varhop-sync accept <cache-dir> <n>"
+  CACHE=$1; N=$2
+  [[ $N =~ ^[0-9]+$ ]] || err usage 2 "generation must be numeric"
+  [ -f "$CACHE/staged-$N.json" ] \
+    || err not-staged "$(code_for not-staged)" "generation was never staged" "run varhop-sync sync first" "$CACHE/staged-$N.json"
+  mv -f "$CACHE/staged-$N.json" "$CACHE/library.json" \
+    || err cache-io "$(code_for cache-io)" "cannot publish bundle" "" "$CACHE/library.json"
+  rm -f "$CACHE"/staged-*.json
+  jq -nc --argjson n "$N" '{accepted:$n}'
+  ;;
+
+sync)
+  [ $# -ge 2 ] || err usage 2 "usage: varhop-sync sync <owner/repo> <cache-dir> --generation <n> [--expect-account <id> --expect-repo <id>]"
+  REPO_ARG=$1; CACHE=$2; shift 2
+  repo_arg_ok "$REPO_ARG" || err usage 2 "invalid owner/repo" "" "$REPO_ARG"
+  GEN=""; EA=""; ER=""
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --generation) [ $# -ge 2 ] && GEN=$2 && shift 2 || err usage 2 "--generation needs a value" ;;
+      --expect-account) [ $# -ge 2 ] && EA=$2 && shift 2 || err usage 2 "--expect-account needs a value" ;;
+      --expect-repo) [ $# -ge 2 ] && ER=$2 && shift 2 || err usage 2 "--expect-repo needs a value" ;;
+      *) err usage 2 "unknown argument" "" "$1" ;;
+    esac
+  done
+  [[ $GEN =~ ^[0-9]+$ ]] || err usage 2 "--generation is required and must be numeric"
+  if [ -n "$EA" ] || [ -n "$ER" ]; then
+    [ -n "$EA" ] && [ -n "$ER" ] || err usage 2 "--expect-account and --expect-repo come as a pair"
+    [[ $EA =~ ^[0-9]+$ ]] && [[ $ER =~ ^[0-9]+$ ]] || err usage 2 "expected ids must be numeric"
+  fi
+
+  gh_call api user
+  [ "$GH_RC" -ne 0 ] && gh_die "reading account identity failed"
+  LOGIN=$(jq -r '.login' <<<"$GH_OUT")
+  AID=$(jq -r '.id' <<<"$GH_OUT")
+
+  gh_call api "repos/$REPO_ARG"
+  [ "$GH_RC" -ne 0 ] && gh_die "repo lookup failed"
+  RID=$(jq -r '.id' <<<"$GH_OUT")
+
+  if [ -n "$EA" ]; then
+    [ "$EA" = "$AID" ] && [ "$ER" = "$RID" ] || errm 5 "$AID" "$RID"
+  fi
+
+  "$FETCH_BIN" "https://github.com/$REPO_ARG.git" "$CACHE" "$RID" "$AID" "$LOGIN" "$GEN"
+  ;;
+
+*)
+  err usage 2 "unknown command" "" "$CMD"
+  ;;
+esac
