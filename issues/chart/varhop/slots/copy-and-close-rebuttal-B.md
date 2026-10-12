@@ -1,0 +1,15 @@
+# Copy and close: rebuttal, slot B
+
+Read 2026-10-12. Positions below are recommendations unless identified as locked.
+
+- **D-a. Deliberate selection.** Keep Ctrl+C as whole-prompt copy throughout the editor. Evidence: `INTAKE.md:31-33` explicitly requests the entire prompt and closing. C's Q3 makes that action depend on selection history and admits that manually selecting precisely a value can produce the opposite result. Tracking selection provenance adds another state without removing that ambiguity. Native selection copy stays in search/settings. A separate selection-copy action would need an operator decision.
+
+- **D-b. Editor Escape.** Keep one Escape to hide and preserve the draft. Evidence: `INTAKE.md:32` requires trips to other apps for values. Returning to search first adds a step to that workflow. This is a recommendation, not a locked Escape binding. C's objection that hide leaves no keyboard route to search misses B's Q4: a deliberate “Find another prompt” action, with its binding owned by settings-and-hotkey. That action keeps the draft until another prompt is chosen.
+
+- **D-c. Search Escape.** Concede C's first-party clear-query-then-hide precedent (`Clipboard.qml:355-358`). I still recommend immediate hide with query retained. Clearing a query and dismissing the overlay are different intentions, and clear-first makes dismissal depend on query contents. The local precedent supports C's option but does not settle varhop's choice.
+
+- **D-d. Empty output.** Keep empty text as a valid copy, replacing the previous clipboard after successful transport completion. Evidence: variable-editing Taken permits explicit empty values, so a body consisting only of one emptied variable legitimately rebuilds to zero bytes. C's claimed transport limitation is unsupported: [wl-copy 2.3.0 source](https://raw.githubusercontent.com/bugaevc/wl-clipboard/v2.3.0/src/wl-copy.c), lines 243-299, opens stdin backing data and offers the explicit text MIME type without rejecting zero length. This supports the proposal, not a completed live proof. Refusal is an additional product rule, not a necessary clipboard constraint. Also qualify the merged history claim: `ClipboardHistory.js:8-10` drops whitespace-only entries, including empty copies.
+
+- **F1. Native clipboard evidence.** Correct A/C's implication that hiding a window necessarily endangers Qt ownership. B's E3-E4 distinguish the documented focus requirement for reads from application-wide ownership for writes. Keep wl-copy for its independent owner and observable process result. Its exit 0 is command completion, not acknowledgement that another app pasted.
+
+- **F2. Refresh and retained drafts.** C's Q4 says reopening the draft's prompt resumes it, but then says reopening after a pull starts fresh. Those rules conflict. Keep the retained draft's original source even when returning through search after sync. Evidence: copy-and-close Carries and sync-and-auth Findings bind refresh to leave an open draft unchanged. Loading the refreshed source requires a deliberate fresh-open/replacement transition, not an implicit reset while resuming the existing draft.

@@ -1,0 +1,22 @@
+remote: origin
+default_branch: main
+rebuttal: true
+direct: false
+fix_rounds: 3
+implement: subagents
+batch_limit: 3
+setup: bun install
+checks:
+  test: bun test --pass-with-no-tests
+merge_checks: {}
+merge_covers: []
+advisory: []
+env: []
+pass_env: []
+tools: []
+grounding:
+  index: docs/reference-index.md
+broadcast:
+  discord:
+    webhook_env:
+      - DISCORD_WEBHOOK_URL

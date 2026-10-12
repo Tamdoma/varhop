@@ -1,0 +1,3 @@
+# Rebuttal brief (slot C)
+Read only: /tmp/claude-1000/-home-ivan-Work-omarchy-customizations-varhop/65e222a2-93a4-41fa-aaad-8274a18132be/scratchpad/map/map-merged.md (plus any file path it cites). Return a DISAGREEMENT-ONLY rebuttal: list only points where you disagree with the merged file's agreed items or with how it records your/others' positions, with evidence (path:line or URL + date). If you have no disagreement on a point, say nothing about it. Do not restate agreements. Do not read other peers' files.
+Write to exactly: /tmp/claude-1000/-home-ivan-Work-omarchy-customizations-varhop/65e222a2-93a4-41fa-aaad-8274a18132be/scratchpad/map/rebuttal-C.md

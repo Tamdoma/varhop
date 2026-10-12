@@ -1,0 +1,13 @@
+# Repo-format disagreement-only rebuttal, slot B
+
+`merged` below means `/home/ivan/Work/omarchy-customizations/varhop/issues/chart/varhop/slots/repo-format-merged.md`. All cited files were read on 2026-10-12.
+
+- **RF1. Correct B's metadata rationale and cost.** `merged:11` turns my position into “QML has no YAML library, so YAML means a hand-written parser.” I rejected a handwritten subset and left a full parser as an alternative requiring a dependency and demonstrated QML compatibility. Absence of a built-in parser does not establish that every usable parser must be handwritten. Also, my sidecar is optional: a prompt needs two files only when it uses metadata. The current wording overstates both the YAML constraint and the sidecar authoring cost. Evidence of the misrecorded position: `merged:10-11`.
+
+- **RF2. The TOML example does not establish the stated YAML cost or error behavior.** The cited parser handles a small set of line-based values and silently skips unmatched lines. It does not demonstrate nested variable records, arrays of tags, quoted-string escaping, or explicit rejection of unsupported YAML. Treat “~60 lines” as an unproven estimate and include the required grammar/diagnostic proof in the option's cost. This matters if the operator is choosing a supposedly small parser that must preserve defaults and report mistakes. Evidence: `merged:10,18`; `/usr/share/omarchy/shell/Commons/Color.qml:179-200`.
+
+- **RF3. Separate name grammar from Tab traversal.** My name rule was `[A-Za-z_][A-Za-z0-9_]*`, case-sensitive. “Letters/digits/underscore” at `merged:16` omits the leading-character restriction. More materially, I proposed occurrences in original body order, not a unique-name traversal that visits only each name's first appearance. Shared value and navigation order are separate choices. Remove B from the unqualified first-appearance agreement, or clarify that it still visits every occurrence. Evidence of the conflation: `merged:15-17`.
+
+- **RF4. First-line detection does not remove the horizontal-rule ambiguity.** A legitimate prompt body can begin with `---`. The check at `merged:12` would still classify that opening as front matter. Present a body-opening convention or disambiguation rule as an authoring cost/open decision, rather than saying this pitfall is removed. Evidence: `merged:10,12`; the counterexample follows directly from the recorded delimiter rule.
+
+- **RF5. Include the version-marker decision in the operator questions.** Q4 lists three different acceptance contracts, but the operator-owned summary leaves this choice out. Required marker, inferred format and optional/configurable marker remain materially different. Do not leave implementers to choose between them. Evidence: `merged:20-21,26-27`.
