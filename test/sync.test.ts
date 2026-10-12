@@ -202,7 +202,7 @@ describe("fetch + accept lifecycle", () => {
     expect(a.code).toBe(0);
     const lib = readLibrary(cache);
     expect(lib.generation).toBe(2);
-    expect(lib.repoId).toBe("222");
+    expect(lib.repoId).toBe(222);
   }, 60000);
 
   test("failure between read and staged rename leaves no staged file and keeps previous bundle", () => {
