@@ -70,7 +70,7 @@ status)
   gh_call auth status --json hosts
   [ "$GH_RC" -eq 124 ] && err timeout 7 "gh auth status timed out" "" "$GH_ERR"
   [ "$GH_RC" -ne 0 ] && gh_die "gh auth status failed"
-  HOST=$(jq -r '."github.com" // empty' <<<"$GH_OUT" 2>/dev/null)
+  HOST=$(jq -r '.hosts["github.com"][0] // empty' <<<"$GH_OUT" 2>/dev/null)
   if [ -z "$HOST" ]; then
     jq -nc '{authenticated:false,fix:"gh auth login"}'
     exit 0

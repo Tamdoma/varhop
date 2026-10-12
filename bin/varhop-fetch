@@ -55,7 +55,7 @@ done
 [ -n "$URL" ] || err usage 2 "git url must not be empty"
 mkdir -p "$CACHE" || err cache-io "$(code_for cache-io)" "cannot create cache dir" "" "$CACHE"
 
-REPO_NAME=$(printf '%s\n' "$URL" | sed -nE 's#.*[:/]([^/]+/[^/]+?)(\.git)?$#\1#p')
+REPO_NAME=$(printf '%s\n' "$URL" | sed -nE 's#.*[:/]([^/]+/[^/]+?)(\.git)?/?$#\1#p' | sed -E 's/\.git$//')
 
 # Active slot is the one named in library.json; fetch refreshes the other.
 ACTIVE=a
