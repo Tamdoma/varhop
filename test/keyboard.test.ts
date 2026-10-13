@@ -1,6 +1,6 @@
 import {test, expect} from "bun:test";
 import {readFileSync} from "node:fs";
-import {parseSequence, withKeyboard, type KeyEvent} from "./keyboard";
+import {deliver, parseSequence, withKeyboard, type KeyEvent} from "./keyboard";
 
 const listed = (name: string): boolean =>
   readFileSync("/proc/bus/input/devices", "utf8").includes(`N: Name="${name}"`);
@@ -32,4 +32,12 @@ test("a usage error exits 2 with its message and no result line", () => {
   expect(result.exitCode).toBe(2);
   expect(result.stdout.toString()).toBe("");
   expect(result.stderr.toString()).toContain("--device must start with varhop-");
+});
+
+test("no press goes out once the overlay is gone, and held keys are released", () => {
+  const written: KeyEvent[] = [];
+  const shown: boolean[] = [true, false];
+  expect(() => deliver(parseSequence("ctrl+a b"), (event: KeyEvent): void => { written.push(event); },
+    (): boolean => shown.shift() ?? false)).toThrow("varhop layer");
+  expect(written).toEqual([{code: 29, value: 1}, {code: 29, value: 0}]);
 });
