@@ -109,6 +109,21 @@ export const withKeyboard = <T>(name: string, run: (send: (events: KeyEvent[]) =
   }
 };
 
+// Writes events in order, checking `targeted` right before each press. Once it is false the
+// held keys are released and no further press goes out.
+export const deliver = (events: KeyEvent[], write: (event: KeyEvent) => void, targeted: () => boolean): void => {
+  const held: number[] = [];
+  for (const [index, event] of events.entries()) {
+    if (event.value === 1 && !targeted()) {
+      for (const code of held.toReversed()) write({code, value: 0});
+      throw new Error(`No varhop layer is shown; stopped with ${events.length - index} of ${events.length} key events unsent`);
+    }
+    write(event);
+    if (event.value === 1) held.push(event.code);
+    else held.splice(held.lastIndexOf(event.code), 1);
+  }
+};
+
 const readClipboard = (): string => {
   const result: ReturnType<typeof Bun.spawnSync> = Bun.spawnSync({cmd: ["wl-paste", "--no-newline"], env: waylandEnv()});
   if (result.exitCode === 1 && result.stderr.toString() === "Nothing is copied\n") return "";
@@ -144,7 +159,7 @@ const main = (): void => {
   if (!varhopLayerShown()) throw new Error("No varhop layer is shown; refusing to send keys");
   let observed: string | null = null;
   withClipboardRestored((): void => withKeyboard(device, (send: (events: KeyEvent[]) => void): void => {
-    send(events);
+    deliver(events, (event: KeyEvent): void => send([event]), varhopLayerShown);
     observed = mode === "none" ? null : observeClipboard(expect as string);
   }));
   if (mode === "none" || observed === expect) {
