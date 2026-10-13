@@ -177,6 +177,8 @@ Item {
         refreshBinds()
     }
 
+    onViewChanged: console.log("varhop-view " + view)
+
     function route() {
         console.log("varhop-view " + view + " sel=" + (selection ? selection.repo : "none") + " draft=" + (draft ? draft.promptId : "none"))
         if (draft !== null) {
@@ -367,6 +369,7 @@ Item {
     Process {
         id: statusProc
         command: [root.syncBin, "status"]
+        onStarted: console.log("varhop-status spawn")
         stdout: StdioCollector {
             onStreamFinished: {
                 try { root.syncStatus = JSON.parse(text) } catch (e) { root.syncStatus = ({}) }
@@ -375,16 +378,36 @@ Item {
         onExited: function(code) { if (code !== 0) root.syncStatus = ({authenticated: false, fix: "gh auth login"}) }
     }
 
+    // Quickshell can refuse early Process starts while the shell is still
+    // booting; keep retrying the lightweight probes until one lands.
+    Timer {
+        id: retryStatus
+        interval: 1500
+        repeat: true
+        running: !!root.manifest && !statusProc.running && !root.syncStatus
+        onTriggered: statusProc.running = true
+    }
+    Timer {
+        id: retryRepos
+        interval: 1500
+        repeat: true
+        running: !!root.manifest && !reposProc.running && root.repos.length === 0
+        onTriggered: reposProc.running = true
+    }
+
     Process {
         id: reposProc
         command: [root.syncBin, "repos"]
+        onStarted: console.log("varhop-repos spawn")
         stdout: StdioCollector {
             onStreamFinished: {
+                console.log("varhop-reposout " + text.slice(0, 120))
                 try { root.repos = JSON.parse(text).repos || [] } catch (e) { root.repos = [] }
             }
         }
         onExited: function(code) { if (code !== 0) root.repos = [] }
     }
+
 
     Process {
         id: repoProc
@@ -578,6 +601,7 @@ Item {
                         item.queryCleared.connect(function() { root.rebuildRows("") })
                         item.hideRequested.connect(root.hide)
                         item.accepted.connect(function(id) {
+                            console.log("varhop-accept " + id + " prompts=" + root.library.prompts.length)
                             for (var i = 0; i < root.library.prompts.length; i++) {
                                 if (root.library.prompts[i].id === id) {
                                     root.prevSearch = {query: item.query, selectedId: id}

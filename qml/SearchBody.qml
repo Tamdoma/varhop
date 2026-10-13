@@ -42,6 +42,7 @@ Item {
         if (event.key === Qt.Key_Up) { move(-1); event.accepted = true }
         else if (event.key === Qt.Key_Down) { move(1); event.accepted = true }
         else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            console.log("varhop-rows " + rows.length + " sel=" + selectedIndex)
             if (rows.length > 0 && selectedIndex >= 0 && selectedIndex < rows.length)
                 accepted(rows[selectedIndex].id)
             event.accepted = true
