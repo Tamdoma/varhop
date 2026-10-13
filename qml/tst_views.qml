@@ -123,6 +123,25 @@ TestCase {
         s.destroy()
     }
 
+    function test_search_query_property_tracks_typing() {
+        // Root-side rebuilds (import, config reload, Ctrl+R) read the public
+        // query; a field that types without updating it leaves the root
+        // rebuilding an empty list after every refresh.
+        var s = createTemporaryObject(searchComp, tc, {
+            width: 700, height: 500, visible: true,
+            rows: [], draftPromptId: "", colors: ({}), query: ""
+        })
+        verify(s)
+        var field = findChild(s, "queryField")
+        field.forceActiveFocus()
+        keyClick(Qt.Key_C)
+        keyClick(Qt.Key_O)
+        compare(s.query, "co", "typing updates the public query")
+        keyClick(Qt.Key_Backspace)
+        compare(s.query, "c", "backspace updates the public query")
+        s.destroy()
+    }
+
     function test_search_field_paste_copy_chords() {
         var s = createTemporaryObject(searchComp, tc, {
             width: 700, height: 500, visible: true,
@@ -258,6 +277,38 @@ TestCase {
         compare(diff.text, "d", "each variable keeps chronological edits")
         compare(language.text, "p")
         e.destroy()
+    }
+
+    function test_editor_draft_carries_undo_history() {
+        // A resumed draft must keep its per-variable undo history: capture,
+        // destroy, reopen, and Ctrl+Z still steps the earlier edit.
+        var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
+            prompt: prompt("A {{X}}", ["X"]),
+            draft: null, copier: null, colors: ({})
+        })
+        verify(e)
+        e.openPrompt()
+        var v = findChild(e, "value0")
+        v.forceActiveFocus()
+        keyClick(Qt.Key_A); keyClick(Qt.Key_B)
+        compare(v.text, "ab")
+        var d = e.captureDraft()
+        verify(d.histories !== undefined && d.histories.X !== undefined,
+               "captured draft carries undo history for X")
+        var e2 = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
+            prompt: e.prompt, draft: d, copier: null, colors: ({})
+        })
+        verify(e2)
+        e2.openPrompt()
+        var v2 = findChild(e2, "value0")
+        compare(v2.text, "ab", "resumed draft restores the value")
+        v2.forceActiveFocus()
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(v2.text, "a", "undo after resume walks the draft's history")
+        e.destroy()
+        e2.destroy()
     }
 
     function test_editor_draft_only_restores_its_own_prompt() {
