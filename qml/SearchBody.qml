@@ -3,7 +3,7 @@ import QtQuick.Controls
 import "FieldKeys.js" as FieldKeys
 
 // Search view: query field, result rows and the pinned "Resume draft" row.
-// Plain QtQuick only; the root injects rows, draft state and colors, and owns
+// Plain QtQuick only; the root injects rows, draft state, theme and tokens, and owns
 // hide/open actions through the emitted signals.
 Item {
     id: root
@@ -11,7 +11,6 @@ Item {
     property var rows: []
     property string draftPromptId: ""
     property string query: ""
-    property var colors: ({})
     property QtObject theme
     property QtObject tokens
     property int selectedIndex: 0
@@ -27,15 +26,6 @@ Item {
     signal resumeDraft
     signal pullRequested
     signal selectionChanged(string id)
-
-    function c(name, fallback) {
-        return colors && colors[name] !== undefined ? colors[name] : fallback
-    }
-    readonly property color _fg: c("foreground", "#cacccc")
-    readonly property color _muted: c("muted", "#707880")
-    readonly property color _accent: c("accent", "#cacccc")
-    readonly property color _selBg: c("selectedBackground", "#22282c")
-    readonly property color _selFg: c("selectedText", "#ffffff")
 
     onRowsChanged: resolveSelection()
 
@@ -93,34 +83,49 @@ Item {
 
     Column {
         anchors.fill: parent
-        spacing: 8
+        spacing: root.tokens.spacing.rowGap
 
         TextArea {
             id: queryField
             objectName: "queryField"
             width: parent.width
-            height: 36
             text: root.query
             focus: true
             onVisibleChanged: if (visible) forceActiveFocus()
             Component.onCompleted: forceActiveFocus()
             wrapMode: TextEdit.NoWrap
-            color: root._fg
-            selectionColor: root._selBg
-            selectedTextColor: root._selFg
-            font.pixelSize: 16
+            color: root.theme.menu.text
+            selectionColor: root.theme.menu.selectedBackground
+            selectedTextColor: root.theme.menu.selectedText
+            font.family: root.tokens.font.menuFamily
+            font.pixelSize: root.tokens.font.heading
+            topPadding: root.tokens.spacing.inputPaddingY
+            bottomPadding: root.tokens.spacing.inputPaddingY
+            leftPadding: root.tokens.spacing.controlPaddingX
+            rightPadding: root.tokens.spacing.controlPaddingX
             textFormat: TextEdit.PlainText
             placeholderText: "Search prompts"
-            placeholderTextColor: root._muted
+            placeholderTextColor: root.theme.muted
             background: Rectangle {
                 color: "transparent"
-                border.color: root.c("border", root._muted)
+                border.color: queryField.activeFocus ? root.theme.menu.selectedBorder : root.theme.menu.border
                 border.width: 1
-                radius: 4
+                radius: root.tokens.cornerRadius
             }
             Keys.priority: Keys.BeforeItem
             Keys.onPressed: function(event) {
                 root.keyTime = Date.now()
+                // The result list is part of this one control; Tab leaves it.
+                if (event.key === Qt.Key_Tab && event.modifiers === Qt.NoModifier) {
+                    queryField.nextItemInFocusChain(true).forceActiveFocus(Qt.TabFocusReason)
+                    event.accepted = true
+                    return
+                }
+                if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && event.modifiers === Qt.ShiftModifier)) {
+                    queryField.nextItemInFocusChain(false).forceActiveFocus(Qt.BacktabFocusReason)
+                    event.accepted = true
+                    return
+                }
                 FieldKeys.handle(event, queryField, {copySelection: true, inertCtrlR: false})
                 if (!event.accepted) root.handleKey(event)
             }
@@ -132,18 +137,24 @@ Item {
 
         // Pinned resume-draft row.
         Rectangle {
+            id: resumeRow
             objectName: "resumeDraftRow"
             visible: root.draftPromptId !== ""
             width: parent.width
-            height: visible ? 36 : 0
-            radius: 4
-            color: root.c("border", "#2a3034")
+            height: visible ? resumeText.implicitHeight + 2 * root.tokens.spacing.controlPaddingY : 0
+            radius: root.tokens.cornerRadius
+            color: "transparent"
+            border.width: 1
+            border.color: root.theme.menu.border
             Text {
+                id: resumeText
                 anchors.left: parent.left
-                anchors.leftMargin: 10
+                anchors.leftMargin: root.tokens.spacing.rowPaddingX
                 anchors.verticalCenter: parent.verticalCenter
                 textFormat: Text.PlainText
-                color: root._accent
+                color: root.theme.accent
+                font.family: root.tokens.font.menuFamily
+                font.pixelSize: root.tokens.font.title
                 text: "Resume draft — Ctrl+Shift+P"
             }
             MouseArea {
@@ -158,65 +169,68 @@ Item {
         ListView {
             id: resultsList
             width: parent.width
-            height: parent.height - queryField.height - (root.draftPromptId !== "" ? 44 : 0) - 16
+            height: parent.height - queryField.height - parent.spacing
+                - (root.draftPromptId !== "" ? resumeRow.height + parent.spacing : 0)
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: root.rows
-            cacheBuffer: 88   // one extra row each direction
+            cacheBuffer: 2 * rowHeight   // one extra row each direction
             reuseItems: true
-            spacing: 4
-
-            function ensureVisible(idx) {
-                if (idx < 0) return
-                var top = idx * 48
-                var bot = top + 44
-                if (top < contentY) contentY = top
-                else if (bot > contentY + height) contentY = bot - height
-            }
+            spacing: root.tokens.spacing.xxs
+            // Title line plus detail line, derived from the font tokens.
+            readonly property int rowHeight: Math.ceil((root.tokens.font.title + root.tokens.font.body) * 1.4)
+                + 2 * root.tokens.spacing.xs
+            readonly property int snippetHeight: Math.ceil(root.tokens.font.body * 1.4)
 
             Connections {
                 target: root
-                function onSelectedIndexChanged() { resultsList.ensureVisible(root.selectedIndex) }
+                function onSelectedIndexChanged() {
+                    if (root.selectedIndex >= 0) resultsList.positionViewAtIndex(root.selectedIndex, ListView.Contain)
+                }
             }
 
             delegate: Rectangle {
                 required property var modelData
                 required property int index
                 objectName: "resultRow" + index
-                width: resultsList.width - 12
-                height: 44
-                radius: 4
-                color: index === root.selectedIndex ? root._selBg : "transparent"
+                width: resultsList.width - root.tokens.spacing.xxl
+                height: resultsList.rowHeight + (modelData.snippet ? resultsList.snippetHeight : 0)
+                radius: root.tokens.cornerRadius
+                color: index === root.selectedIndex ? root.theme.menu.selectedBackground : "transparent"
                 Column {
                     anchors.fill: parent
-                    anchors.leftMargin: 10
-                    anchors.rightMargin: 10
-                    anchors.topMargin: 4
-                    spacing: 1
+                    anchors.leftMargin: root.tokens.spacing.rowPaddingX
+                    anchors.rightMargin: root.tokens.spacing.rowPaddingX
+                    anchors.topMargin: root.tokens.spacing.xs
+                    spacing: 0
                     Row {
-                        spacing: 8
+                        spacing: root.tokens.spacing.controlGap
                         Text {
                             textFormat: Text.PlainText
                             text: modelData.title
-                            color: index === root.selectedIndex ? root._selFg : root._fg
-                            font.pixelSize: 14
+                            color: index === root.selectedIndex ? root.theme.menu.selectedText : root.theme.menu.text
+                            font.family: root.tokens.font.menuFamily
+                            font.pixelSize: root.tokens.font.title
                             font.bold: index === root.selectedIndex
                         }
                         Text {
+                            anchors.verticalCenter: parent.verticalCenter
                             visible: modelData.draft === true
                             textFormat: Text.PlainText
                             text: "Draft"
-                            color: root._accent
-                            font.pixelSize: 11
+                            color: root.theme.accent
+                            font.family: root.tokens.font.menuFamily
+                            font.pixelSize: root.tokens.font.body
                         }
                     }
                     Row {
-                        spacing: 8
+                        spacing: root.tokens.spacing.controlGap
                         Text {
                             textFormat: Text.PlainText
                             text: modelData.detail
-                            color: root._muted
-                            font.pixelSize: 11
+                            color: root.theme.muted
+                            font.family: root.tokens.font.menuFamily
+                            font.pixelSize: root.tokens.font.body
                             elide: Text.ElideRight
                             width: Math.min(implicitWidth, resultsList.width * 0.7)
                         }
@@ -224,16 +238,18 @@ Item {
                             visible: modelData.fileName !== "" && modelData.fileName !== null
                             textFormat: Text.PlainText
                             text: modelData.fileName
-                            color: root._muted
-                            font.pixelSize: 11
+                            color: root.theme.muted
+                            font.family: root.tokens.font.menuFamily
+                            font.pixelSize: root.tokens.font.body
                         }
                     }
                     Text {
                         visible: modelData.snippet !== "" && modelData.snippet !== null
                         textFormat: Text.PlainText
                         text: modelData.snippet
-                        color: root._muted
-                        font.pixelSize: 11
+                        color: root.theme.muted
+                        font.family: root.tokens.font.menuFamily
+                        font.pixelSize: root.tokens.font.body
                         elide: Text.ElideRight
                         width: parent.width
                     }
@@ -250,7 +266,9 @@ Item {
                 visible: root.rows.length === 0
                 textFormat: Text.PlainText
                 text: "No prompts"
-                color: root._muted
+                color: root.theme.muted
+                font.family: root.tokens.font.menuFamily
+                font.pixelSize: root.tokens.font.body
             }
         }
     }
