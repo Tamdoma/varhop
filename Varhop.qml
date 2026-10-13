@@ -518,6 +518,11 @@ Item {
                 focus: true
 
                 Keys.onPressed: function(event) {
+                    var v = root.view === "search" ? searchLoader.item
+                        : root.view === "editor" ? editorLoader.item
+                        : settingsLoader.item
+                    if (v && v.handleKey) v.handleKey(event)
+                    if (event.accepted) return
                     if (event.key === Qt.Key_Comma && event.modifiers === Qt.ControlModifier) {
                         if (root.view === "settings") {
                             root.view = root.cameFrom === "" ? "search" : root.cameFrom

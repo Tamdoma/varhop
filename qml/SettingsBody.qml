@@ -77,7 +77,7 @@ Item {
             : ""
     }
 
-    function globalKeys(event) {
+    function handleKey(event) {
         var ctrl = event.modifiers === Qt.ControlModifier
         var ctrlShift = event.modifiers === (Qt.ControlModifier | Qt.ShiftModifier)
         if (ctrl && event.key === Qt.Key_R) {
@@ -95,7 +95,7 @@ Item {
         }
     }
 
-    Keys.onPressed: function(event) { root.globalKeys(event) }
+    Keys.onPressed: function(event) { root.handleKey(event) }
 
     function fieldKeys(event, field) {
         FieldKeys.handle(event, field, {copySelection: true, inertCtrlR: true})

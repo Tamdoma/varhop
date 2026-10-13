@@ -38,7 +38,7 @@ Item {
         selectedIndex = ((selectedIndex + delta) % rows.length + rows.length) % rows.length
     }
 
-    function handleGlobalKeys(event) {
+    function handleKey(event) {
         if (event.key === Qt.Key_Up) { move(-1); event.accepted = true }
         else if (event.key === Qt.Key_Down) { move(1); event.accepted = true }
         else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -59,7 +59,7 @@ Item {
         }
     }
 
-    Keys.onPressed: function(event) { root.handleGlobalKeys(event) }
+    Keys.onPressed: function(event) { root.handleKey(event) }
 
     Column {
         anchors.fill: parent
@@ -90,7 +90,7 @@ Item {
             Keys.onPressed: function(event) {
                 root.keyTime = Date.now()
                 FieldKeys.handle(event, queryField, {copySelection: true, inertCtrlR: false})
-                if (!event.accepted) root.handleGlobalKeys(event)
+                if (!event.accepted) root.handleKey(event)
             }
             onTextChanged: root.queryEdited(text)
         }

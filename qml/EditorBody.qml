@@ -189,7 +189,7 @@ Item {
         copyRequested()
     }
 
-    function handleGlobalKeys(event) {
+    function handleKey(event) {
         var ctrl = (event.modifiers === Qt.ControlModifier)
         var ctrlShift = (event.modifiers === (Qt.ControlModifier | Qt.ShiftModifier))
         if ((ctrl || ctrlShift) && event.key === Qt.Key_C) {
@@ -209,7 +209,7 @@ Item {
         }
     }
 
-    Keys.onPressed: function(event) { root.handleGlobalKeys(event) }
+    Keys.onPressed: function(event) { root.handleKey(event) }
 
     onCopierChanged: {
         if (copier && copier.failed)
@@ -312,7 +312,7 @@ Item {
                                 event.accepted = true
                             } else {
                                 FieldKeys.handle(event, field, {copySelection: false, inertCtrlR: false})
-                                if (!event.accepted) root.handleGlobalKeys(event)
+                                if (!event.accepted) root.handleKey(event)
                             }
                         }
                         onTextChanged: {
