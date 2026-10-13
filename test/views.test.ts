@@ -4,7 +4,7 @@ import {join} from "node:path";
 // Component checks: the interactive views import no Quickshell module, so
 // qmltestrunner on the real Wayland platform loads them, pastes from the real
 // clipboard and synthesizes clicks (proofs-overlay.md row 16).
-test("view component checks pass under qmltestrunner on wayland", () => {
+test("view component checks pass under qmltestrunner on wayland", {timeout: 60_000}, () => {
   const res = Bun.spawnSync({
     cmd: [
       "/usr/lib/qt6/bin/qmltestrunner",

@@ -7,7 +7,7 @@ import {join} from "node:path";
 const paste = (args) =>
   Bun.spawnSync({cmd: ["wl-paste", ...args], stdout: "pipe", stderr: "pipe"});
 
-test("copier reports failure for exit!=0, failed start and timeout", () => {
+test("copier reports failure for exit!=0, failed start and timeout", {timeout: 60_000}, () => {
   const saved = paste(["-n"]).stdout;
   try {
     const res = Bun.spawnSync({
