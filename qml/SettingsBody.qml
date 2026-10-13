@@ -146,7 +146,21 @@ Item {
         FieldKeys.handle(event, field, {copySelection: true, inertCtrlR: true})
     }
 
+    // Keep the focused control inside the visible area as Tab moves.
+    readonly property Item _focusNow: root.Window.activeFocusItem
+    on_FocusNowChanged: {
+        for (var it = _focusNow; it; it = it.parent) {
+            if (it !== col) continue
+            var top = _focusNow.mapToItem(col, 0, 0).y
+            var bottom = top + _focusNow.height
+            if (top < flick.contentY) flick.contentY = top
+            else if (bottom > flick.contentY + flick.height) flick.contentY = bottom - flick.height
+            return
+        }
+    }
+
     Flickable {
+        id: flick
         anchors.fill: parent
         contentHeight: col.implicitHeight
         clip: true
