@@ -311,6 +311,23 @@ TestCase {
         compare(f.text, "ab PP cd", "the rejected cut left the clipboard unchanged")
     }
 
+    function test_editor_rejected_shift_delete_keeps_clipboard() {
+        seedClipboard("SENTINEL")
+        var e = openEditor("A {{X}} b", ["X"])
+        var f = textBox(e)
+        typeText("value")
+        waitValue(e, "X", "value")
+        keyClick(Qt.Key_Home, Qt.ControlModifier)
+        keyClick(Qt.Key_End, Qt.ShiftModifier)
+        compare(f.selectedText, "A value b")
+        keyClick(Qt.Key_Delete, Qt.ShiftModifier)
+        tryCompare(f, "text", "A value b", 1000, "the cut across prose is rejected")
+        var r = occurrence(e, "X", 0)
+        f.select(r.start, r.end)
+        keyClick(Qt.Key_V, Qt.ControlModifier)
+        waitValue(e, "X", "SENTINEL")
+    }
+
     function test_editor_click_edits_that_occurrence_in_place() {
         var e = openEditor("A {{X}} mid {{Y}} end {{X}}", ["X", "Y"])
         var f = textBox(e)
