@@ -26,3 +26,10 @@ test("the virtual keyboard exists only while run executes, also when run throws"
   expect(() => withKeyboard(name, (): never => { throw new Error("run failed"); })).toThrow("run failed");
   expect(listed(name)).toBe(false);
 });
+
+test("a usage error exits 2 with its message and no result line", () => {
+  const result: ReturnType<typeof Bun.spawnSync> = Bun.spawnSync({cmd: [process.execPath, `${import.meta.dir}/keyboard.ts`, "--device", "kbd"]});
+  expect(result.exitCode).toBe(2);
+  expect(result.stdout.toString()).toBe("");
+  expect(result.stderr.toString()).toContain("--device must start with varhop-");
+});
