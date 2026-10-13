@@ -68,11 +68,12 @@ TestCase {
             colors: ({}), query: ""
         })
         verify(s)
+        // ListView creates delegates asynchronously.
+        tryVerify(function() { return hasText(s, "needle inside body") }, 2000)
         verify(hasText(s, "Deploy prod"), "title row")
         verify(hasText(s, "ops / release"), "category path")
         verify(hasText(s, "ship the build"), "description")
         verify(hasText(s, "deploy-prod.md"), "file name when title does not identify it")
-        verify(hasText(s, "needle inside body"), "body-only snippet")
         verify(hasText(s, "Draft"), "draft marker")
         s.destroy()
     }
@@ -92,6 +93,8 @@ TestCase {
         verify(hasText(s, "Ctrl+Shift+P") || hasText(s, "Resume draft"), "resume row shows its chord")
         mouseClick(resume)
         compare(spyResume.count, 1)
+        tryVerify(function() { return findChild(s, "resultRow0") !== null }, 2000)
+        waitForRendering(s)
         var row0 = findChild(s, "resultRow0")
         verify(row0, "result row exists")
         mouseClick(row0)

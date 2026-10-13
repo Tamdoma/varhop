@@ -147,91 +147,105 @@ Item {
             }
         }
 
-        Flickable {
+        // ListView instantiates only the rows on screen: a Repeater would
+        // build one delegate per ranked prompt and blows the 50 ms key-to-
+        // frame budget at multi-thousand-prompt libraries.
+        ListView {
+            id: resultsList
             width: parent.width
             height: parent.height - queryField.height - (root.draftPromptId !== "" ? 44 : 0) - 16
-            contentHeight: col.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
+            model: root.rows
+            cacheBuffer: 88   // one extra row each direction
+            reuseItems: true
+            spacing: 4
 
-            Column {
-                id: col
-                width: parent.width - 12
-                spacing: 4
+            function ensureVisible(idx) {
+                if (idx < 0) return
+                var top = idx * 48
+                var bot = top + 44
+                if (top < contentY) contentY = top
+                else if (bot > contentY + height) contentY = bot - height
+            }
 
-                Repeater {
-                    model: root.rows
-                    delegate: Rectangle {
-                        objectName: "resultRow" + index
-                        width: col.width
-                        height: 44
-                        radius: 4
-                        color: index === root.selectedIndex ? root._selBg : "transparent"
-                        Column {
-                            anchors.fill: parent
-                            anchors.leftMargin: 10
-                            anchors.rightMargin: 10
-                            anchors.topMargin: 4
-                            spacing: 1
-                            Row {
-                                spacing: 8
-                                Text {
-                                    textFormat: Text.PlainText
-                                    text: modelData.title
-                                    color: index === root.selectedIndex ? root._selFg : root._fg
-                                    font.pixelSize: 14
-                                    font.bold: index === root.selectedIndex
-                                }
-                                Text {
-                                    visible: modelData.draft === true
-                                    textFormat: Text.PlainText
-                                    text: "Draft"
-                                    color: root._accent
-                                    font.pixelSize: 11
-                                }
-                            }
-                            Row {
-                                spacing: 8
-                                Text {
-                                    textFormat: Text.PlainText
-                                    text: modelData.detail
-                                    color: root._muted
-                                    font.pixelSize: 11
-                                    elide: Text.ElideRight
-                                    width: Math.min(implicitWidth, col.width * 0.7)
-                                }
-                                Text {
-                                    visible: modelData.fileName !== "" && modelData.fileName !== null
-                                    textFormat: Text.PlainText
-                                    text: modelData.fileName
-                                    color: root._muted
-                                    font.pixelSize: 11
-                                }
-                            }
-                            Text {
-                                visible: modelData.snippet !== "" && modelData.snippet !== null
-                                textFormat: Text.PlainText
-                                text: modelData.snippet
-                                color: root._muted
-                                font.pixelSize: 11
-                                elide: Text.ElideRight
-                                width: parent.width
-                            }
+            Connections {
+                target: root
+                function onSelectedIndexChanged() { resultsList.ensureVisible(root.selectedIndex) }
+            }
+
+            delegate: Rectangle {
+                required property var modelData
+                required property int index
+                objectName: "resultRow" + index
+                width: resultsList.width - 12
+                height: 44
+                radius: 4
+                color: index === root.selectedIndex ? root._selBg : "transparent"
+                Column {
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    anchors.topMargin: 4
+                    spacing: 1
+                    Row {
+                        spacing: 8
+                        Text {
+                            textFormat: Text.PlainText
+                            text: modelData.title
+                            color: index === root.selectedIndex ? root._selFg : root._fg
+                            font.pixelSize: 14
+                            font.bold: index === root.selectedIndex
                         }
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            onClicked: root.accepted(modelData.id)
+                        Text {
+                            visible: modelData.draft === true
+                            textFormat: Text.PlainText
+                            text: "Draft"
+                            color: root._accent
+                            font.pixelSize: 11
                         }
                     }
+                    Row {
+                        spacing: 8
+                        Text {
+                            textFormat: Text.PlainText
+                            text: modelData.detail
+                            color: root._muted
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                            width: Math.min(implicitWidth, resultsList.width * 0.7)
+                        }
+                        Text {
+                            visible: modelData.fileName !== "" && modelData.fileName !== null
+                            textFormat: Text.PlainText
+                            text: modelData.fileName
+                            color: root._muted
+                            font.pixelSize: 11
+                        }
+                    }
+                    Text {
+                        visible: modelData.snippet !== "" && modelData.snippet !== null
+                        textFormat: Text.PlainText
+                        text: modelData.snippet
+                        color: root._muted
+                        font.pixelSize: 11
+                        elide: Text.ElideRight
+                        width: parent.width
+                    }
                 }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onClicked: root.accepted(modelData.id)
+                }
+            }
 
-                Text {
-                    visible: root.rows.length === 0
-                    textFormat: Text.PlainText
-                    text: "No prompts"
-                    color: root._muted
-                }
+            Text {
+                anchors.top: parent.top
+                visible: root.rows.length === 0
+                textFormat: Text.PlainText
+                text: "No prompts"
+                color: root._muted
             }
         }
     }

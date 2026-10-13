@@ -39,6 +39,7 @@ Item {
     property var draft: null                // {promptId,values,activeName,cursor,selection}
     property var prevSearch: null           // {query, selectedId} for Ctrl+P return
     property string lastQuery: ""           // query the current rows were built for
+    property string _lastKey: ""            // folded term key of lastQuery
     property bool retainSelection: false    // rows changed without a query edit
     property string _lastSelected: ""       // last selected row id, survives view switches
     property var currentPrompt: null
@@ -157,29 +158,73 @@ Item {
         return base
     }
 
+    // Rank + row-materialization are pure in (prompts, usage, canonical
+    // query terms, draft), each an immutable snapshot, so equal inputs
+    // replay cached rows. A small LRU covers backspacing and repeated
+    // queries; snapshot identity invalidates without bookkeeping.
+    property var _rowCacheMap: null
+    readonly property int _rowCacheCap: 32
+    // Detail strings and stem display decisions depend only on the prompt
+    // object; caching them per id keeps each keystroke's row build linear
+    // and small at multi-thousand-prompt libraries.
+    property var _partCache: ({})
+    property var _partCacheFor: null
+
+    function _parts(p) {
+        if (_partCacheFor !== library.prompts) {
+            _partCache = {}
+            _partCacheFor = library.prompts
+        }
+        var hit = _partCache[p.id]
+        if (hit !== undefined) return hit
+        var cat = p.subcategory ? p.category + " / " + p.subcategory : p.category
+        var detail = cat + (p.description ? " — " + p.description : "")
+        var stem = fileNameStem(p.id)
+        var showFile = Fold.fold(p.title).indexOf(Fold.fold(stem.replace(/\.md$/, ""))) === -1
+        hit = {detail: detail, fileName: showFile ? stem : ""}
+        _partCache[p.id] = hit
+        return hit
+    }
+
     function rebuildRows(query) {
         query = query || ""
-        retainSelection = (query === lastQuery)
+        // Ranking only reads folded terms, so whitespace-only differences
+        // produce identical rows and share one cache entry.
+        var key = Sea.fold(query).split(/\s+/).filter(function(t) { return t !== "" }).join(" ")
+        retainSelection = (key === _lastKey)
+        _lastKey = key
         lastQuery = query
+        if (_rowCacheMap === null) _rowCacheMap = new Map()
+        var c = _rowCacheMap.get(key)
+        if (c && c.prompts === library.prompts && c.usage === usage && c.draft === draft) {
+            // Refresh recency inside the LRU.
+            _rowCacheMap.delete(key)
+            _rowCacheMap.set(key, c)
+            rows = c.rows
+            return
+        }
         var ranked = Sea.rank(library.prompts, query, usage, Date.now())
+        // Linear scan per row was quadratic at large libraries; the map
+        // lookup keeps each keystroke inside the frame budget.
+        var byId = {}
+        for (var m = 0; m < library.prompts.length; m++)
+            byId[library.prompts[m].id] = library.prompts[m]
         var out = []
         for (var i = 0; i < ranked.length; i++) {
-            var p = null
-            for (var k = 0; k < library.prompts.length; k++)
-                if (library.prompts[k].id === ranked[i].id) { p = library.prompts[k]; break }
+            var p = byId[ranked[i].id]
             if (!p) continue
-            var cat = p.subcategory ? p.category + " / " + p.subcategory : p.category
-            var detail = cat + (p.description ? " — " + p.description : "")
-            var stem = fileNameStem(p.id)
-            var showFile = Fold.fold(p.title).indexOf(Fold.fold(stem.replace(/\.md$/, ""))) === -1
+            var parts = _parts(p)
             out.push({
-                id: p.id, title: p.title, detail: detail,
-                fileName: showFile ? stem : "",
+                id: p.id, title: p.title, detail: parts.detail,
+                fileName: parts.fileName,
                 draft: draft !== null && draft.promptId === p.id,
                 snippet: ranked[i].snippet || ""
             })
         }
         rows = out
+        if (_rowCacheMap.size > _rowCacheCap)
+            _rowCacheMap.delete(_rowCacheMap.keys().next().value)
+        _rowCacheMap.set(key, {prompts: library.prompts, usage: usage, draft: draft, rows: out})
     }
 
     function refreshStatus() {
