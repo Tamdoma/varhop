@@ -3,7 +3,8 @@
 // so on the hr layout KEY_Y types z and KEY_Z types y.
 //   bun test/keyboard.ts --device varhop-<leaf>-kbd --keys "ctrl+a backspace a b" \
 //     --read field|clipboard|none [--expect "<text>"]
-// Exit 0 with a pass line on match, 1 with a fail line (expected, observed) on mismatch.
+// Exit 0 with a pass line on match, 1 with a fail line (expected, observed) on mismatch,
+// 2 on a usage or environment error (message on stderr, no result line).
 import {dlopen, FFIType, ptr} from "bun:ffi";
 import {closeSync, openSync, writeSync} from "node:fs";
 import {parseArgs} from "node:util";
@@ -154,4 +155,11 @@ const main = (): void => {
   process.exitCode = 1;
 };
 
-if (import.meta.main) main();
+if (import.meta.main) {
+  try {
+    main();
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 2;
+  }
+}
