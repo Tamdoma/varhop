@@ -363,7 +363,7 @@ Item {
                     root.undo(); event.accepted = true
                 } else if ((ctrl && event.key === Qt.Key_Y) || (ctrlShift && event.key === Qt.Key_Z)) {
                     root.redo(); event.accepted = true
-                } else if ((ctrl || ctrlShift) && event.key === Qt.Key_X) {
+                } else if (((ctrl || ctrlShift) && event.key === Qt.Key_X) || event.matches(StandardKey.Cut)) {
                     root.cut(); event.accepted = true
                 } else {
                     FieldKeys.handle(event, editorText, {copySelection: false, inertCtrlR: false})
