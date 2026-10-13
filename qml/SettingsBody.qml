@@ -308,7 +308,8 @@ Item {
                     color: root._fg
                     font.pixelSize: 13
                     validator: RegularExpressionValidator {
-                        regularExpression: /\s*(?:(?:SUPER|SHIFT|CTRL|ALT|META)\s*\+\s*)+(?:[A-Z0-9]|TAB|ESC|ESCAPE|RETURN|ENTER|SPACE|BACKSPACE|DELETE|HOME|END|PAGEUP|PAGEDOWN|UP|DOWN|LEFT|RIGHT)\s*/
+                        regularExpression: new RegExp("\\s*(?:(?:" + Object.keys(root._modBits).join("|")
+                            + ")\\s*\\+\\s*)+(?:[A-Z0-9]|" + root._keyNames.join("|") + ")\\s*")
                     }
                     placeholderText: "SUPER + ALT + P"
                     placeholderTextColor: root._muted
