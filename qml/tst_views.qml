@@ -1,5 +1,6 @@
 import QtQuick
-import QtQuick.Test
+import QtQuick.Controls
+import QtTest
 
 // Component checks for the varhop views. The views import no Quickshell module,
 // so qmltestrunner loads them; all shell services (copier, repo list, binds)
@@ -10,6 +11,7 @@ TestCase {
     when: windowShown
     width: 900
     height: 700
+    visible: true
 
     function allChildren(root) {
         var out = []
@@ -56,6 +58,7 @@ TestCase {
 
     function test_search_rows_show_details() {
         var s = createTemporaryObject(searchComp, tc, {
+            width: 700, height: 500, visible: true,
             rows: [
                 {id: "p1", title: "Deploy prod", detail: "ops / release — ship the build", fileName: "deploy-prod.md", draft: false, snippet: ""},
                 {id: "p2", title: "Body hit", detail: "ops / misc — other", fileName: "misc.md", draft: false, snippet: "…needle inside body…"},
@@ -76,6 +79,7 @@ TestCase {
 
     function test_search_resume_row_and_result_click() {
         var s = createTemporaryObject(searchComp, tc, {
+            width: 700, height: 500, visible: true,
             rows: [{id: "p1", title: "One", detail: "c — d", fileName: "one.md", draft: false, snippet: ""}],
             draftPromptId: "p1",
             colors: ({}), query: ""
@@ -98,6 +102,7 @@ TestCase {
 
     function test_search_esc_clear_then_hide() {
         var s = createTemporaryObject(searchComp, tc, {
+            width: 700, height: 500, visible: true,
             rows: [], draftPromptId: "", colors: ({}), query: ""
         })
         verify(s)
@@ -117,6 +122,7 @@ TestCase {
 
     function test_search_field_paste_copy_chords() {
         var s = createTemporaryObject(searchComp, tc, {
+            width: 700, height: 500, visible: true,
             rows: [], draftPromptId: "", colors: ({}), query: ""
         })
         verify(s)
@@ -147,6 +153,7 @@ TestCase {
 
     function test_editor_tab_wrap_and_mirror() {
         var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
             prompt: prompt("A {{X}} mid {{Y}} end {{X}}", ["X", "Y"]),
             draft: null, copier: null, colors: ({})
         })
@@ -175,6 +182,7 @@ TestCase {
 
     function test_editor_delete_reset_and_undo() {
         var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
             prompt: prompt("A {{X}}", ["X"]),
             draft: null, copier: null, colors: ({})
         })
@@ -196,18 +204,21 @@ TestCase {
 
     function test_editor_zero_variable_requests_copy() {
         var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
             prompt: prompt("plain body", []),
             draft: null, copier: null, colors: ({})
         })
         verify(e)
         var spy = spyComp.createObject(tc, {target: e, signalName: "copyRequested"})
         e.openPrompt()
+        tryVerify(function() { return spy.count === 1 }, 1000)
         compare(spy.count, 1, "zero-variable prompt opens ready and copies")
         e.destroy()
     }
 
     function test_editor_paste_multiline_and_mirror_click() {
         var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
             prompt: prompt("A {{X}} mid {{Y}} end {{X}}", ["X", "Y"]),
             draft: null, copier: null, colors: ({})
         })
@@ -238,6 +249,7 @@ TestCase {
 
     function test_editor_right_click_paste() {
         var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
             prompt: prompt("A {{X}}", ["X"]),
             draft: null, copier: null, colors: ({})
         })
@@ -249,14 +261,26 @@ TestCase {
         v.selectAll()
         v.copy()
         v.text = ""
+        // A synthetic right-click instantiates the attached context menu but
+        // does not synthesize QContextMenuEvent, so it stays closed; open the
+        // same TextEditingContextMenu a real right-click opens and trigger Paste.
         mouseClick(v, v.width / 2, v.height / 2, Qt.RightButton)
-        wait(50)
-        verify(hasText(e, "Paste") || hasText(e, "paste"), "right-click menu opens with Paste")
-        var menu = textsUnder(e, "Paste")
-        if (menu.length > 0)
-            mouseClick(menu[0])
+        tryVerify(function() { return v.ContextMenu && v.ContextMenu.menu !== null }, 1000)
+        var menu = v.ContextMenu.menu
+        verify(menu, "value field has an attached context menu")
+        menu.open()
+        tryVerify(function() { return menu.opened }, 500)
+        var pasteItem = null
+        for (var i = 0; i < menu.count; i++) {
+            var it = menu.itemAt(i)
+            if (it && it.text === "Paste") { pasteItem = it; break }
+        }
+        verify(pasteItem, "menu has Paste")
+        if (pasteItem.action && typeof pasteItem.action.trigger === "function")
+            pasteItem.action.trigger()
         else
-            keyClick(Qt.Key_V, Qt.ControlModifier)
+            pasteItem.clicked()
+        tryVerify(function() { return v.text === "clip" }, 500)
         compare(v.text, "clip", "right-click paste lands in the value")
         e.destroy()
     }
@@ -264,6 +288,7 @@ TestCase {
     function test_editor_copy_failure_keeps_draft() {
         var stub = failingCopierComponent.createObject(tc)
         var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
             prompt: prompt("A {{X}}", ["X"]),
             draft: null, copier: stub, colors: ({})
         })
@@ -284,6 +309,7 @@ TestCase {
 
     function test_settings_logged_out_shows_fix() {
         var s = createTemporaryObject(settingsComp, tc, {
+            width: 700, height: 500, visible: true,
             syncStatus: {authenticated: false, fix: "gh auth login"},
             lastPull: "", lastError: "", loadErrors: [],
             selection: null, binds: [], repos: [], colors: ({})
@@ -295,6 +321,7 @@ TestCase {
 
     function test_settings_failed_pull_and_merged_errors() {
         var s = createTemporaryObject(settingsComp, tc, {
+            width: 700, height: 500, visible: true,
             syncStatus: {authenticated: true, login: "ivanjuras", scopes: ["repo", "read:org"]},
             lastPull: "2026-10-13 10:00",
             lastError: "network: fetch failed",
@@ -316,6 +343,7 @@ TestCase {
 
     function test_chord_field_states() {
         var s = createTemporaryObject(settingsComp, tc, {
+            width: 700, height: 500, visible: true,
             syncStatus: {authenticated: true, login: "u", scopes: []},
             lastPull: "", lastError: "", loadErrors: [],
             selection: {repo: "a/b"},
@@ -338,6 +366,7 @@ TestCase {
 
     function test_settings_field_paste_copy_chords() {
         var s = createTemporaryObject(settingsComp, tc, {
+            width: 700, height: 500, visible: true,
             syncStatus: {authenticated: true, login: "u", scopes: []},
             lastPull: "", lastError: "", loadErrors: [],
             selection: {repo: "a/b"}, binds: [], repos: [], colors: ({})
@@ -366,6 +395,7 @@ TestCase {
     function test_plain_text_format() {
         var hostile = "<b>x</b> and <img src='http://127.0.0.1:9/x'>"
         var s = createTemporaryObject(searchComp, tc, {
+            width: 700, height: 500, visible: true,
             rows: [{id: "p1", title: hostile, detail: hostile, fileName: "f.md", draft: false, snippet: hostile}],
             draftPromptId: "", colors: ({}), query: ""
         })

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "ivan.varhop",
+  "name": "Varhop",
+  "version": "1.0.0",
+  "author": "ivan",
+  "description": "Search and fill prompts from a GitHub prompt library in a themed overlay",
+  "kinds": ["overlay"],
+  "keepLoaded": true,
+  "entryPoints": {
+    "overlay": "Varhop.qml"
+  }
+}
