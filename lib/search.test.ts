@@ -128,8 +128,8 @@ test("empty query: up to 10 recent copies by recency, then library by category",
     prompt({path: "prompts/c/w.md", title: "cw"}),
   ];
   const byCategory = [
-    "prompts/a/sub/a.md",
     "prompts/a/y.md",
+    "prompts/a/sub/a.md",
     "prompts/a/sub/z.md",
     "prompts/b/x.md",
     "prompts/c/w.md",
