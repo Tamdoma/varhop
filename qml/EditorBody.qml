@@ -37,58 +37,58 @@ Item {
     property var _names: []
     property var _nameStops: ({})       // name -> stop index in unique order
     property var _values: ({})          // name -> string
-    property var _hist: []              // unified per-editor undo timeline:
-                                        //   {kind:"typed", name, had, got} a field edit
-                                        //   {kind:"empty", name, had} Delete emptied a value
-                                        //   {kind:"reset", name, had} Delete on empty restored {{NAME}}
+    property var _hist: ({})            // per-name chronological undo timelines:
+                                        //   {kind:"typed", had, got} a field edit
+                                        //   {kind:"empty", had} Delete emptied a value
+                                        //   {kind:"reset", had} Delete on empty restored {{NAME}}
                                         // had === undefined means the value was unset.
-    property var _redos: []             // undone entries, same shapes
+    property var _redos: ({})           // per-name undone entries, same shapes
     property bool _applying: false      // suppress history marks on programmatic writes
 
     function pushAction(name, kind, had, got) {
-        _hist.push({kind: kind, name: name, had: had, got: got})
-        _redos = []
+        _hist[name].push({kind: kind, had: had, got: got})
+        _redos[name] = []
     }
-    function undoTop() {
-        if (_hist.length === 0) return false
-        var a = _hist.pop()
-        _redos.push(a)
+    function undoTop(name) {
+        if (_hist[name].length === 0) return false
+        var a = _hist[name].pop()
+        _redos[name].push(a)
         _applying = true
         if (a.kind === "typed") {
-            var f = fieldFor(a.name)
+            var f = fieldFor(name)
             if (f) f.text = a.had === undefined ? "" : a.had
-            if (a.had === undefined) unsetValue(a.name)
-            else setValue(a.name, a.had)
+            if (a.had === undefined) unsetValue(name)
+            else setValue(name, a.had)
         } else if (a.kind === "empty") {
-            var g = fieldFor(a.name)
+            var g = fieldFor(name)
             if (g) g.text = a.had
-            setValue(a.name, a.had)
+            setValue(name, a.had)
         } else {
             // undo a reset: return to the present-but-empty value state
-            var h = fieldFor(a.name)
+            var h = fieldFor(name)
             if (h) h.text = ""
-            setValue(a.name, "")
+            setValue(name, "")
         }
         _applying = false
         return true
     }
-    function redoTop() {
-        if (_redos.length === 0) return false
-        var a = _redos.pop()
-        _hist.push(a)
+    function redoTop(name) {
+        if (_redos[name].length === 0) return false
+        var a = _redos[name].pop()
+        _hist[name].push(a)
         _applying = true
         if (a.kind === "typed") {
-            var f = fieldFor(a.name)
+            var f = fieldFor(name)
             if (f) f.text = a.got
-            setValue(a.name, a.got)
+            setValue(name, a.got)
         } else if (a.kind === "empty") {
-            var g = fieldFor(a.name)
+            var g = fieldFor(name)
             if (g) g.text = ""
-            setValue(a.name, "")
+            setValue(name, "")
         } else {
-            var h = fieldFor(a.name)
+            var h = fieldFor(name)
             if (h) h.text = ""
-            unsetValue(a.name)
+            unsetValue(name)
         }
         _applying = false
         return true
@@ -98,14 +98,18 @@ Item {
         _segments = Tokens.splitSegments(prompt ? String(prompt.body || "") : "")
         _names = Tokens.uniqueNames(prompt ? String(prompt.body || "") : "")
         var stops = {}
+        var histories = {}
+        var redos = {}
         var idx = 0
         for (var i = 0; i < _names.length; i++) {
             stops[_names[i]] = idx
+            histories[_names[i]] = []
+            redos[_names[i]] = []
             idx++
         }
         _nameStops = stops
-        _hist = []
-        _redos = []
+        _hist = histories
+        _redos = redos
         lastError = ""
         // A draft belongs to one prompt id; any other prompt starts clean.
         var draft = (root.draft && root.prompt && root.draft.promptId === root.prompt.id) ? root.draft : null
@@ -310,10 +314,10 @@ Item {
                                 }
                                 event.accepted = true
                             } else if (event.key === Qt.Key_Z && mods === Qt.ControlModifier) {
-                                root.undoTop()
+                                root.undoTop(seg.name)
                                 event.accepted = true
                             } else if (event.key === Qt.Key_Y && mods === Qt.ControlModifier) {
-                                root.redoTop()
+                                root.redoTop(seg.name)
                                 event.accepted = true
                             } else {
                                 FieldKeys.handle(event, field, {copySelection: false, inertCtrlR: false})
