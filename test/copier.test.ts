@@ -23,3 +23,13 @@ test("copier reports failure for exit!=0, failed start and timeout", {timeout: 6
     expect(res.exitCode).toBe(0);
     expect(out.includes("copier-probe:")).toBe(false);
 }));
+
+test("one retained copier completes consecutive stdin copies", {timeout: 60_000}, () => {
+  const result = Bun.spawnSync({
+    cmd: ["quickshell", "-p", join(import.meta.dir, "..", "qml", "tst_copier_repeated.qml")],
+    env: {...waylandEnv(), QT_QPA_PLATFORM: "wayland"},
+    stdout: "pipe", stderr: "pipe", timeout: 10_000,
+  });
+  if (result.exitCode !== 0) console.error(result.stdout.toString() + result.stderr.toString());
+  expect(result.exitCode).toBe(0);
+});
