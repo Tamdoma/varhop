@@ -1,0 +1,49 @@
+slug: overlay-plugin
+phase: merged
+created: 2026-10-13
+repo: varhop
+debate: "no"
+blocked-by: []
+sources: []
+busy_since: {}
+busy_notified: {}
+attempts:
+  A: 0
+  B: 0
+done: []
+fix_rounds: 1
+verdict: {}
+tab: wK:tC
+env_names: []
+env_generation: 1
+pane:
+  A: wK:pJ
+  B: wK:pK
+prompted: {}
+prompted_at: {}
+delivery_error: {}
+merge_stamp: 2026-10-13T11:31:20.678Z
+frozen:
+  README.md: bd02fe99e464337f0c93fb2ca010613483ea4db2
+  Varhop.qml: 3c8747f2cc0c03dd7322d38e717bc41dd9728f0e
+  lib/import.mjs: 70ebc65c5cc94d7c239f0ff46b7bab8d457c65d2
+  lib/search.mjs: 1c30b4c41d34ae51f36fcdbb76a7ede9388350c7
+  manifest.json: 8f823868a6ebdcb6054c861073fa6c22f72bdf0f
+  qml/Copier.qml: 7cbf22374e968468a23160870eab52ba59d7e9b2
+  qml/EditorBody.qml: fe2651c772e134414ad536dfbe96fbf645c6f97e
+  qml/FieldKeys.js: 23d07f520c36d0c1eaeb88b8c59e359250b10ece
+  qml/SearchBody.qml: 247847fecf30b228c7fb143a3a91484bd906582a
+  qml/SettingsBody.qml: f690c9222eaedf7b38bbf1d0770e2d0991e9ed40
+  qml/tst_copier.qml: c1531442094241ade828182fd1a3e19ab2ee38a8
+  qml/tst_copier_repeated.qml: cd3609f482476e7a59dbaa93f7a816e44f99cc55
+  qml/tst_views.qml: afdba646ffcea6346ea113aedbb1525d015f5e02
+  test/clipboard.test.ts: 9bb2f14c64d33b492ab050e93a30884ed0038e58
+  test/clipboard.ts: b5ace43ef3c0fc18498396f0d2ee8a9c52fcdc1c
+  test/copier.test.ts: 33bfeaa34ee2d3d53526d0a816829c7eac4d01a4
+  test/keyboard.test.ts: a3866c4c370d2b5fc628f97baec86fe05153c004
+  test/make-library.sh: 5cbdbc0ffca0374816adfb134f79549234b0b426
+  test/plugin.test.ts: 4eff63758a90285017ec82b8c7d041df45359aaa
+  test/views.test.ts: b8e697c50049130a5827c08b86965e822e1e6fcb
+frozen_cited:
+  - "test/clipboard.ts B F14 configured QML checks replace an empty operator clipboard and cannot restore under scrubbed session env; share capture, restore and byte verification for both selections"
+  - "test/make-library.sh new fixture generator for the synthetic library bundle used by plugin.test.ts; added in this leaf's test pass"

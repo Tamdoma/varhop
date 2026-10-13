@@ -1,0 +1,221 @@
+bun install v1.4.3 (c6da4a4d3)
+
+[0.00ms] done
+bun test v1.4.3 (c6da4a4d3)
+[0.00ms] ".env"
+No packages! Deleted empty lockfile
+
+test/sync.test.ts:
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-fetch'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:117:16)
+(fail) fetch + accept lifecycle > fetch stages without touching library; accept publishes; second fetch publishes new commit [5.33ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:154:17)
+(fail) fetch + accept lifecycle > accept of an unstaged generation exits non-zero and changes nothing; accept sweeps other staged files [4.48ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-fetch'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:171:5)
+(fail) fetch + accept lifecycle > a failed fetch exits non-zero with error JSON and preserves library and active slot [4.18ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-fetch'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:191:5)
+(fail) fetch + accept lifecycle > fetch of repo B left unaccepted keeps A's library and slot; later accept publishes B [7.77ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-fetch'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:211:5)
+(fail) fetch + accept lifecycle > failure between read and staged rename leaves no staged file and keeps previous bundle [4.32ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-fetch'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:232:15)
+(fail) fetch + accept lifecycle > checkout transforms from .gitattributes eol=crlf ident do not alter bundle text [3.72ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-fetch'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:250:15)
+(fail) repo states and file selection > empty repo stages status empty-repo with exit 0 [2.04ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-fetch'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:263:15)
+(fail) repo states and file selection > repo without prompts/ stages status no-prompts with exit 0 [4.09ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-fetch'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:287:15)
+(fail) repo states and file selection > symlinks, submodules and non-.md files are skipped; invalid UTF-8 errors while others load [24.66ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-fetch'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:304:15)
+(fail) repo states and file selection > files deeper than two levels and files directly under prompts/ become error entries [3.84ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:319:17)
+(fail) argument validation > sync refuses malformed repo '../x' with usage exit 2 [0.12ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:319:17)
+(fail) argument validation > sync refuses malformed repo 'a/b/c' with usage exit 2 [0.05ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:319:17)
+(fail) argument validation > sync refuses malformed repo '-x/y' with usage exit 2 [0.04ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:319:17)
+(fail) argument validation > sync refuses malformed repo 'a b/c' with usage exit 2 [0.04ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:319:17)
+(fail) argument validation > sync refuses malformed repo 'a;b/c' with usage exit 2 [0.04ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:319:17)
+(fail) argument validation > sync refuses malformed repo 'a/../c' with usage exit 2 [0.04ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:319:17)
+(fail) argument validation > sync refuses malformed repo './x' with usage exit 2 [0.04ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:333:17)
+(fail) argument validation > sync requires --generation and paired numeric expect flags [0.11ms]
+16 | const REPO_ID = "1416196860";
+17 | 
+18 | interface RunOut { code: number; out: string; err: string; json(): any }
+19 | 
+20 | function run(cmd: string[], env: Record<string, string> = {}): RunOut {
+21 |   const p = spawnSync({
+                 ^
+error: ENOENT: no such file or directory, posix_spawn '/home/ivan/.akrogon/worktrees/varhop/repo-sync/bin/varhop-sync'
+      at run (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:21:13)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/repo-sync/test/sync.test.ts:344:15)
+(fail) auth > empty GH_CONFIG_DIR: status reports unauthenticated with fix; sync exits auth without prompting [0.14ms]
+
+ 0 pass
+ 19 fail
+Ran 19 tests across 1 file. [69.00ms]

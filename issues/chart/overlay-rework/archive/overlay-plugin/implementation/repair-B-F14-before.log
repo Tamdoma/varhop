@@ -1,0 +1,17 @@
+F14 before: configured QML wrappers, normal session environment. Existing grant: local ivan; clipboard and primary captured before run.
+Exit: 0
+Byte/absence equality after wrappers: clipboard=False, primary=True
+bun test v1.4.3 (c6da4a4d3)
+
+test/views.test.ts:
+(pass) view component checks pass under qmltestrunner on wayland [5466.26ms]
+
+test/copier.test.ts:
+(pass) copier reports failure for exit!=0, failed start and timeout [957.52ms]
+
+ 2 pass
+ 0 fail
+ 4 expect() calls
+Ran 2 tests across 2 files. [6.43s]
+
+Outer preservation restored both selections; byte/absence comparisons passed. No original clipboard bytes printed or saved.

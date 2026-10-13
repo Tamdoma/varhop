@@ -1,0 +1,14 @@
+opened: '2026-10-13T06:57:06Z'
+seats:
+  - seat: A
+    pane: wK:p3
+    harness: claude
+    session: 876e73e3-0fa0-4750-9275-e3f55533374e
+  - seat: B
+    pane: wK:p4
+    harness: codex
+    session: null
+  - seat: C
+    pane: wK:p5
+    harness: pi
+    session: /home/ivan/.pi/agent/sessions/--home-ivan-Work-omarchy-customizations-varhop--/2026-10-12T20-28-28-795Z_01a131cd-6cfb-74e6-869a-6d379b940ea8.jsonl

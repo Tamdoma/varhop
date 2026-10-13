@@ -1,0 +1,31 @@
+F14 daemon-lifecycle reproduction on f2b2d93. Outer preservation uses detached streams. Exit: 1
+bun test v1.4.3 (c6da4a4d3)
+
+test/clipboard.test.ts:
+{
+  exitCode: null,
+  timeout: true,
+  stderr: "",
+}
+28 |     cmd: ["bun", "--eval", probe], env: waylandEnv(),
+29 |     stdout: "pipe", stderr: "pipe", timeout: 3000,
+30 |   });
+31 |   if (result.exitCode !== 0)
+32 |     console.error({exitCode: result.exitCode, timeout: result.exitedDueToTimeout, stderr: result.stderr.toString()});
+33 |   expect(result.exitCode).toBe(0);
+                               ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: null
+
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/clipboard.test.ts:33:27)
+      at withClipboardRestored (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/clipboard.ts:49:5)
+(fail) nonempty clipboard and primary restoration completes and preserves bytes [3008.92ms]
+
+ 0 pass
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [3.01s]
+
+Outer clipboard/primary restoration verified byte-exact; original bytes not logged.

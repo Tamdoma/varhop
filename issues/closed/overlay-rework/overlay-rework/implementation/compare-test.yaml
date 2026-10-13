@@ -1,0 +1,22 @@
+state: inconsistent
+command:
+  - akrogon
+  - run-check
+  - --name
+  - test
+  - --
+  - sh
+  - -c
+  - "flock \"$(git rev-parse --git-path akrogon-install.lock)\" sh -c 'bun install' && akrogon guard own-modules && sh -c 'bun test --pass-with-no-tests'"
+cwd: /home/ivan/.akrogon/worktrees/varhop/overlay-rework
+scope: whole bun test, leaf scope
+material: "Wayland session (HDMI-A-1, DP-2, DP-1), operator active in the session, other sessions' run-checks contending for the run permit; same command, args and cwd on both runs"
+leaf_revision: fa71cf010c77ea0edf9b4c794199f98fa518efed
+log: /home/ivan/Work/omarchy-customizations/varhop/issues/open/overlay-rework/overlay-rework/implementation/check-test-1791901205363-3663161.log
+run:
+  complete: true
+retry:
+  log: /home/ivan/Work/omarchy-customizations/varhop/issues/open/overlay-rework/overlay-rework/implementation/check-test-1791910073795-1067274.log
+  complete: true
+  outcome: pass
+units: []

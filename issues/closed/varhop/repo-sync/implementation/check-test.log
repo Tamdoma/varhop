@@ -1,0 +1,32 @@
+bun install v1.4.3 (c6da4a4d3)
+
+[0.00ms] done
+bun test v1.4.3 (c6da4a4d3)
+[0.00ms] ".env"
+No packages! Deleted empty lockfile
+
+test/sync.test.ts:
+(pass) fetch + accept lifecycle > fetch stages without touching library; accept publishes; second fetch publishes new commit [104.81ms]
+(pass) fetch + accept lifecycle > accept of an unstaged generation exits non-zero and changes nothing; accept sweeps other staged files [87.75ms]
+(pass) fetch + accept lifecycle > a failed fetch exits non-zero with error JSON and preserves library and active slot [108.19ms]
+(pass) fetch + accept lifecycle > fetch of repo B left unaccepted keeps A's library and slot; later accept publishes B [142.39ms]
+(pass) fetch + accept lifecycle > failure between read and staged rename leaves no staged file and keeps previous bundle [84.40ms]
+(pass) fetch + accept lifecycle > checkout transforms from .gitattributes eol=crlf ident do not alter bundle text [41.68ms]
+(pass) repo states and file selection > empty repo stages status empty-repo with exit 0 [11.88ms]
+(pass) repo states and file selection > repo without prompts/ stages status no-prompts with exit 0 [36.33ms]
+(pass) repo states and file selection > symlinks, submodules and non-.md files are skipped; invalid UTF-8 errors while others load [61.71ms]
+(pass) repo states and file selection > files deeper than two levels and files directly under prompts/ become error entries [38.39ms]
+(pass) argument validation > sync refuses malformed repo '../x' with usage exit 2 [2.86ms]
+(pass) argument validation > sync refuses malformed repo 'a/b/c' with usage exit 2 [2.48ms]
+(pass) argument validation > sync refuses malformed repo '-x/y' with usage exit 2 [2.54ms]
+(pass) argument validation > sync refuses malformed repo 'a b/c' with usage exit 2 [3.14ms]
+(pass) argument validation > sync refuses malformed repo 'a;b/c' with usage exit 2 [2.69ms]
+(pass) argument validation > sync refuses malformed repo 'a/../c' with usage exit 2 [2.91ms]
+(pass) argument validation > sync refuses malformed repo './x' with usage exit 2 [2.77ms]
+(pass) argument validation > sync requires --generation and paired numeric expect flags [11.36ms]
+(pass) auth > empty GH_CONFIG_DIR: status reports unauthenticated with fix; sync exits auth without prompting [75.72ms]
+
+ 19 pass
+ 0 fail
+ 110 expect() calls
+Ran 19 tests across 1 file. [828.00ms]

@@ -258,6 +258,20 @@ TestCase {
         compare(e.valueOf("Y"), undefined)
     }
 
+    function test_editor_highlights_hide_until_ranges_follow_a_keystroke() {
+        var e = openEditor("{{X}}\n\n{{Y}}", ["X", "Y"])
+        function boxes() { return allChildren(e).filter(function(it) { return it.objectName === "valueHighlight" }) }
+        compare(boxes().length, 2)
+        var f = textBox(e)
+        f.remove(f.selectionStart, f.selectionEnd)
+        f.insert(0, "v")   // a raw edit; the guard pass runs on the next event loop turn
+        verify(f.text !== e._shown, "ranges are stale until the guard pass")
+        boxes().forEach(function(b) { verify(!b.visible, b.name + " box drew from stale ranges") })
+        waitValue(e, "X", "v")
+        compare(boxes().length, 2)
+        boxes().forEach(function(b) { verify(b.visible, b.name + " box shows once ranges follow") })
+    }
+
     function test_editor_tab_walks_unique_names_with_wrap() {
         var e = openEditor("A {{X}} mid {{Y}} end {{X}}", ["X", "Y"])
         var f = textBox(e)

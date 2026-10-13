@@ -1,0 +1,16 @@
+Grant: readiness.yaml desktop grant; local ivan; temporary qmltestrunner config. No clipboard commands, shell config or installed plugin changes.
+Exit: 0
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.12.0, Qt 6.12.0 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 16.2.1 20260810), omarchy 4.0.0.r6912.gdefbf90
+PASS   : qmltestrunner::ReviewObservations::initTestCase()
+QDEBUG : qmltestrunner::ReviewObservations::test_observe() qml: ZERO_VARIABLE_COPIER_CALLS 0
+QDEBUG : qmltestrunner::ReviewObservations::test_observe() qml: RESET_THEN_TYPING h
+QDEBUG : qmltestrunner::ReviewObservations::test_observe() qml: UNDO_AFTER_TYPING old
+QDEBUG : qmltestrunner::ReviewObservations::test_observe() qml: EMPTY_VALUE_MIRROR {{X}}
+QDEBUG : qmltestrunner::ReviewObservations::test_observe() qml: QUERY_FIELD_code_ROOT_QUERY ""
+PASS   : qmltestrunner::ReviewObservations::test_observe()
+PASS   : qmltestrunner::ReviewObservations::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 104ms
+********* Finished testing of qmltestrunner *********
+
+Temporary config removed. Absence checked: True

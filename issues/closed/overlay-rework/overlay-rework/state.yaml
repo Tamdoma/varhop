@@ -1,0 +1,35 @@
+slug: overlay-rework
+phase: merged
+created: 2026-10-13
+repo: varhop
+debate: "no"
+blocked-by:
+  - overlay-plugin
+sources:
+  - "Tamdoma/varhop#1"
+busy_since: {}
+busy_notified: {}
+attempts:
+  A: 0
+  B: 0
+done: []
+fix_rounds: 1
+verdict: {}
+tab: wK:tD
+env_names: []
+env_generation: 2
+pane:
+  A: wK:pM
+  B: wK:pN
+prompted: {}
+prompted_at: {}
+delivery_error: {}
+merge_stamp: 2026-10-13T19:28:47.425Z
+frozen:
+  qml/testing/FakeTheme.qml: afca62a73c10c232aa03dcc20722da2b4190deb3
+  qml/testing/FakeTokens.qml: 6ed352770d51245df189ccf8848bdd49bbbdcb19
+  qml/tst_card.qml: dabc2215d433f0513a80c25e81bffb29a188a8c2
+  qml/tst_views.qml: ff44be86cbdbf8441bd515a9583a69fe84f0a7ef
+  test/plugin.test.ts: 3852bd1ac3e3d2c9014d2ddfaa39a2bd193ff73f
+  test/views.test.ts: b7a8414b03f21f2a4650c15c303284149adb2682
+frozen_cited: []

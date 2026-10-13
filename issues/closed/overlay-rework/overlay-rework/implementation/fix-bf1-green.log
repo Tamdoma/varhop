@@ -1,0 +1,17 @@
+PASS   : qmltestrunner::VarhopCard::initTestCase()
+PASS   : qmltestrunner::VarhopCard::test_ctrl_tab_round_trip_keeps_body_state()
+PASS   : qmltestrunner::VarhopCard::test_editor_back_same_state_three_ways()
+PASS   : qmltestrunner::VarhopCard::test_esc_in_body_keeps_its_meaning()
+PASS   : qmltestrunner::VarhopCard::test_fonts_follow_menu_family_and_size_tokens()
+PASS   : qmltestrunner::VarhopCard::test_header_rows_titles_and_shortcuts()
+PASS   : qmltestrunner::VarhopCard::test_larger_base_does_not_clip()
+PASS   : qmltestrunner::VarhopCard::test_library_mismatch_route()
+PASS   : qmltestrunner::VarhopCard::test_plain_tab_reaches_header_and_space_presses()
+PASS   : qmltestrunner::VarhopCard::test_plain_tab_to_header_then_esc_returns_to_input()
+PASS   : qmltestrunner::VarhopCard::test_search_settings_round_trip_three_ways()
+PASS   : qmltestrunner::VarhopCard::test_settings_round_trip_from_editor_three_ways()
+PASS   : qmltestrunner::VarhopCard::test_settings_without_return_shows_close()
+PASS   : qmltestrunner::VarhopCard::test_theme_roles_bind_live()
+PASS   : qmltestrunner::VarhopCard::cleanupTestCase()
+Totals: 15 passed, 0 failed, 0 skipped, 0 blacklisted, 2788ms
+exit 0

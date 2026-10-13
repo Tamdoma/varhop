@@ -1,7 +1,0 @@
-slug: overlay-plugin
-phase: plan.synthesis
-created: '2026-10-13'
-repo: varhop
-debate: 'no'
-blocked-by: [prompt-core, repo-sync]
-sources: []

@@ -1,0 +1,13 @@
+138 |   if (keys === undefined) throw new Error("--keys is required");
+139 |   if (read !== "field" && read !== "clipboard" && read !== "none") throw new Error(`--read must be field, clipboard or none, got ${read}`);
+140 |   if (read !== "none" && expect === undefined) throw new Error(`--expect is required with --read ${read}`);
+141 |   const mode: Read = read;
+142 |   const events: KeyEvent[] = [...parseSequence(keys), ...(mode === "field" ? parseSequence("ctrl+a ctrl+c") : [])];
+143 |   if (!varhopLayerShown()) throw new Error("No varhop layer is shown; refusing to send keys");
+                                           ^
+error: No varhop layer is shown; refusing to send keys
+      at main (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/keyboard.ts:143:38)
+      at /home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/keyboard.ts:157:23
+
+Bun v1.4.3 (Linux x64)
+exit=1

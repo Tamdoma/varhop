@@ -1,0 +1,10 @@
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.12.0, Qt 6.12.0 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 16.2.1 20260810), omarchy 4.0.0.r6912.gdefbf90
+PASS   : qmltestrunner::VarhopViews::initTestCase()
+FAIL!  : qmltestrunner::VarhopViews::test_review_shift_delete_rejected_cut() rejected Shift+Delete must not cut to clipboard
+   Actual   (): A value b
+   Expected (): SENTINEL
+   Loc: [/tmp/akr-1000/5c3c/64dcfe16/varhop-review-B-0rcoq6qo/tst_editor_probe.qml(928)]
+PASS   : qmltestrunner::VarhopViews::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 825ms
+********* Finished testing of qmltestrunner *********

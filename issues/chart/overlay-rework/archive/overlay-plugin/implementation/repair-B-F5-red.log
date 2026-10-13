@@ -1,0 +1,32 @@
+bun test v1.4.3 (c6da4a4d3)
+
+test/copier.test.ts:
+(pass) copier reports failure for exit!=0, failed start and timeout [1022.58ms]
+  INFO: Launching config: "/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/qml/tst_copier_repeated.qml"
+  INFO: Shell ID: "dd7b324e526b9d214dbabbf77627a011" Path ID "dd7b324e526b9d214dbabbf77627a011"
+  INFO: Saving logs to "/run/user/1000/quickshell/by-id/qjql15uotmt/log.qslog"
+  WARN: <Unknown File>: QML ProxyFloatingWindow: Setting `width` is deprecated. Set `implicitWidth` instead.
+  WARN: <Unknown File>: QML ProxyFloatingWindow: Setting `height` is deprecated. Set `implicitHeight` instead.
+  INFO: Configuration Loaded
+  WARN qt.qpa.services: Failed to register with host portal QDBusError("org.freedesktop.portal.Error.Failed", "Could not register app ID: Connection already associated with an application ID")
+ ERROR qml: copy timed out after 1000 ms
+
+29 |     cmd: ["quickshell", "-p", join(import.meta.dir, "..", "qml", "tst_copier_repeated.qml")],
+30 |     env: {...waylandEnv(), QT_QPA_PLATFORM: "wayland"},
+31 |     stdout: "pipe", stderr: "pipe", timeout: 10_000,
+32 |   });
+33 |   if (result.exitCode !== 0) console.error(result.stdout.toString() + result.stderr.toString());
+34 |   expect(result.exitCode).toBe(0);
+                               ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/copier.test.ts:34:27)
+(fail) one retained copier completes consecutive stdin copies [1380.55ms]
+
+ 1 pass
+ 1 fail
+ 3 expect() calls
+Ran 2 tests across 1 file. [2.41s]

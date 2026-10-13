@@ -1,0 +1,16 @@
+114 | export const deliver = (events: KeyEvent[], write: (event: KeyEvent) => void, targeted: () => boolean): void => {
+115 |   const held: number[] = [];
+116 |   for (const [index, event] of events.entries()) {
+117 |     if (event.value === 1 && !targeted()) {
+118 |       for (const code of held.toReversed()) write({code, value: 0});
+119 |       throw new Error(`No varhop layer is shown; stopped with ${events.length - index} of ${events.length} key events unsent`);
+                      ^
+error: No varhop layer is shown; stopped with 2 of 10 key events unsent
+      at deliver (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/keyboard.ts:119:17)
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/keyboard.ts:162:5)
+      at withKeyboard (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/keyboard.ts:97:14)
+      at withClipboardRestored (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/clipboard.ts:63:5)
+      at main (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/keyboard.ts:161:3)
+      at /home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/keyboard.ts:175:5
+
+exit 2

@@ -1,0 +1,162 @@
+bun install v1.4.3 (c6da4a4d3)
+
+[0.00ms] done
+bun test v1.4.3 (c6da4a4d3)
+[0.00ms] ".env"
+No packages! Deleted empty lockfile
+
+lib/import.test.ts:
+(pass) thematic break fixture: --- + prose + --- = header, prose errors, body follows [0.43ms]
+(pass) empty-header escape: a body starting with --- survives verbatim [0.04ms]
+(pass) unclosed --- is all body plus an unclosed error [0.06ms]
+(pass) title with ': ' must be quoted; unquoted ': ' errors and title defaults [0.12ms]
+(pass) comment stripping requires a space before # [0.04ms]
+(pass) description: | is an unsupported known key; title still parses [0.03ms]
+(pass) BOM then leading blank lines means no header; BOM is stripped, body verbatim [0.03ms]
+(pass) BOM without a header leaves body unchanged after stripping [0.05ms]
+(pass) BOM before a CRLF header parses, body keeps CRLF and no final newline [0.07ms]
+(pass) duplicate title: first wins, second gets an error [0.03ms]
+(pass) mixed-type flow tags coerce to strings and drop duplicates [0.12ms]
+(pass) indentless and indented block tags, plus a single scalar tag [0.06ms]
+(pass) paths: category and optional subcategory, deeper errors, rest ignored [0.06ms]
+(pass) a prompt carries names and precomputed folded search fields [0.08ms]
+(pass) unknown metadata continuation lines are ignored without hiding known-key errors [0.03ms]
+(pass) comments after empty metadata values stay absent and block tags still parse [0.02ms]
+
+lib/qml.test.ts:
+(pass) every exported module loads in the QML engine and a smoke call exits 0 [21.85ms]
+
+lib/rebuild.test.ts:
+(pass) with no values the body is reproduced exactly and every name is unset [0.08ms]
+(pass) a CRLF body with no final newline round-trips [0.01ms]
+(pass) escapes come out as literal {{NAME}} and are not unset names [0.02ms]
+(pass) every occurrence of a name gets its value
+(pass) a value containing {{OTHER}} is inserted literally
+(pass) an empty string is a set value, not unset
+(pass) unset names are reported in first-appearance order
+
+lib/search.test.ts:
+(pass) fold lowercases and strips diacritics, đ folds to d [0.02ms]
+(pass) a folded query matches diacritics in the library [0.41ms]
+(pass) terms are ANDed: every term must match some field [0.08ms]
+(pass) field weights run title > file name > tags > category/subcategory > description [0.22ms]
+(pass) fzf-V1 shape: tight subsequence beats scattered, no typo tolerance [0.12ms]
+(pass) queries and fields match case-insensitively [0.03ms]
+(pass) body tier: terms of 3+ chars match folded body when structured hits are few [0.07ms]
+(pass) terms shorter than 3 characters never reach the body [0.02ms]
+(pass) body tier is skipped once structured matches fill the display chunk [0.47ms]
+(pass) frecency reorders only within equal relevance [0.12ms]
+(pass) empty query: up to 10 recent copies by recency, then library by category [0.15ms]
+(pass) empty query caps the recent section at 10 [0.13ms]
+(pass) identical explicit titles score equally even when one equals the stem [0.03ms]
+
+lib/tokens.test.ts:
+(pass) splits a body into text and token segments [0.03ms]
+(pass) token names allow digits and underscores anywhere [0.02ms]
+(pass) {{{NAME}}} is literal brace, token, literal brace
+(pass) tokens inside code fences count [0.01ms]
+(pass) an escaped \{{NAME}} becomes a text segment holding the literal [0.02ms]
+(pass) backslash is removed only before a valid token [0.01ms]
+(pass) lowercase and malformed braces stay literal [0.03ms]
+(pass) uniqueNames lists names in first-appearance order [0.01ms]
+
+lib/usage.test.ts:
+(pass) HALF_LIFE_MS is 14 days in milliseconds
+(pass) resetUsage returns an empty v1 state
+(pass) recordCopy on an empty state starts the entry at score 1 [0.01ms]
+(pass) a repeat copy one half-life later decays the stored score by half [0.02ms]
+(pass) recordCopy does not decay untouched entries and does not mutate its input [0.02ms]
+(pass) parseUsage accepts a serialized state [0.07ms]
+(pass) parseUsage rejects malformed JSON and wrong shapes with an error [0.06ms]
+
+test/clipboard.test.ts:
+(pass) nonempty clipboard and primary restoration completes and preserves bytes [27.05ms]
+
+test/copier.test.ts:
+(pass) copier reports failure for exit!=0, failed start and timeout [890.71ms]
+(pass) one retained copier completes consecutive stdin copies [364.89ms]
+
+test/keyboard.test.ts:
+(pass) chords press left to right and release right to left [0.24ms]
+(pass) an unknown key name is refused by name [0.05ms]
+(pass) the virtual keyboard exists only while run executes, also when run throws [207.22ms]
+(pass) a usage error exits 2 with its message and no result line [8.19ms]
+(pass) no press goes out once the overlay is gone, and held keys are released [0.20ms]
+
+test/plugin.test.ts:
+(pass) manifest.json declares the ivan.varhop overlay plugin [0.21ms]
+(pass) Varhop.qml builds the card on the Omarchy menu surface [0.38ms]
+
+test/sync.test.ts:
+(pass) fetch + accept lifecycle > fetch stages without touching library; accept publishes; second fetch publishes new commit [101.23ms]
+(pass) fetch + accept lifecycle > accept of an unstaged generation exits non-zero and changes nothing; accept sweeps other staged files [86.54ms]
+(pass) fetch + accept lifecycle > a failed fetch exits non-zero with error JSON and preserves library and active slot [104.76ms]
+(pass) fetch + accept lifecycle > fetch of repo B left unaccepted keeps A's library and slot; later accept publishes B [139.18ms]
+(pass) fetch + accept lifecycle > failure between read and staged rename leaves no staged file and keeps previous bundle [86.19ms]
+(pass) fetch + accept lifecycle > checkout transforms from .gitattributes eol=crlf ident do not alter bundle text [44.34ms]
+(pass) repo states and file selection > empty repo stages status empty-repo with exit 0 [12.94ms]
+(pass) repo states and file selection > repo without prompts/ stages status no-prompts with exit 0 [37.03ms]
+(pass) repo states and file selection > symlinks, submodules and non-.md files are skipped; invalid UTF-8 errors while others load [63.50ms]
+(pass) repo states and file selection > repo with prompts/ but no usable markdown stages status no-prompts [37.21ms]
+(pass) repo states and file selection > files deeper than two levels and files directly under prompts/ become error entries [42.90ms]
+(pass) argument validation > sync refuses malformed repo '../x' with usage exit 2 [2.95ms]
+(pass) argument validation > sync refuses malformed repo 'a/b/c' with usage exit 2 [2.58ms]
+(pass) argument validation > sync refuses malformed repo '-x/y' with usage exit 2 [2.47ms]
+(pass) argument validation > sync refuses malformed repo 'a b/c' with usage exit 2 [2.48ms]
+(pass) argument validation > sync refuses malformed repo 'a;b/c' with usage exit 2 [3.06ms]
+(pass) argument validation > sync refuses malformed repo 'a/../c' with usage exit 2 [3.23ms]
+(pass) argument validation > sync refuses malformed repo './x' with usage exit 2 [3.09ms]
+(pass) argument validation > sync requires --generation and paired numeric expect flags [11.07ms]
+(pass) auth > empty GH_CONFIG_DIR: status reports unauthenticated with fix; sync exits auth without prompting [72.10ms]
+
+test/views.test.ts:
+(pass) tst_views.qml component checks pass under qmltestrunner on wayland [967.22ms]
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.12.0, Qt 6.12.0 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 16.2.1 20260810), omarchy 4.0.0.r6912.gdefbf90
+PASS   : qmltestrunner::VarhopCard::initTestCase()
+PASS   : qmltestrunner::VarhopCard::test_ctrl_tab_round_trip_keeps_body_state()
+PASS   : qmltestrunner::VarhopCard::test_editor_back_same_state_three_ways()
+PASS   : qmltestrunner::VarhopCard::test_esc_in_body_keeps_its_meaning()
+PASS   : qmltestrunner::VarhopCard::test_fonts_follow_menu_family_and_size_tokens()
+PASS   : qmltestrunner::VarhopCard::test_header_rows_titles_and_shortcuts()
+PASS   : qmltestrunner::VarhopCard::test_larger_base_does_not_clip()
+PASS   : qmltestrunner::VarhopCard::test_library_mismatch_route()
+PASS   : qmltestrunner::VarhopCard::test_plain_tab_reaches_header_and_space_presses()
+PASS   : qmltestrunner::VarhopCard::test_search_settings_round_trip_three_ways()
+PASS   : qmltestrunner::VarhopCard::test_settings_round_trip_from_editor_three_ways()
+PASS   : qmltestrunner::VarhopCard::test_settings_without_return_shows_close()
+FAIL!  : qmltestrunner::VarhopCard::test_theme_roles_bind_live() property lastQuery
+   Actual   (): d
+   Expected (): de
+   Loc: [/home/ivan/.akrogon/worktrees/varhop/overlay-rework/qml/tst_card.qml(98)]
+PASS   : qmltestrunner::VarhopCard::cleanupTestCase()
+Totals: 13 passed, 1 failed, 0 skipped, 0 blacklisted, 5261ms
+********* Finished testing of qmltestrunner *********
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+
+25 |     timeout: 120_000,
+26 |   });
+27 |   const out = res.stdout.toString() + res.stderr.toString();
+28 |   if (res.exitCode !== 0 || !out.includes("Totals:") || !/Totals:.*0 failed/.test(out))
+29 |     console.error(out);
+30 |   expect(res.exitCode).toBe(0);
+                            ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/overlay-rework/test/views.test.ts:30:24)
+      at withClipboardRestored (/home/ivan/.akrogon/worktrees/varhop/overlay-rework/test/clipboard.ts:63:5)
+(fail) tst_card.qml component checks pass under qmltestrunner on wayland [5626.05ms]
+
+1 tests failed:
+(fail) tst_card.qml component checks pass under qmltestrunner on wayland [5626.05ms]
+
+ 83 pass
+ 1 fail
+ 322 expect() calls
+Ran 84 tests across 12 files. [8.99s]

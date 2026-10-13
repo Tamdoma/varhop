@@ -1,0 +1,186 @@
+[
+  {
+    "command": [
+      "git",
+      "init",
+      "-q",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/errors-only"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "-C",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/errors-only",
+      "add",
+      "."
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "command": [
+      "git",
+      "-C",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/errors-only",
+      "-c",
+      "user.name=Review",
+      "-c",
+      "user.email=review@example.invalid",
+      "commit",
+      "-qm",
+      "invalid utf8 prompt"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "command": [
+      "bin/varhop-fetch",
+      "file:///tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/errors-only",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/errors-cache",
+      "1416196860",
+      "6634086",
+      "ivanjuras",
+      "1"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "errors-only": "PASS",
+    "status": "ok",
+    "errors": [
+      {
+        "path": "prompts/notes/bad.md",
+        "message": "invalid UTF-8"
+      }
+    ]
+  },
+  {
+    "command": [
+      "bin/varhop-sync",
+      "sync",
+      "Tamdoma/varhop-prompts",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/live-cache",
+      "--generation",
+      "1",
+      "--expect-account",
+      "6634086",
+      "--expect-repo",
+      "1416196860"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "command": [
+      "bin/varhop-sync",
+      "accept",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/live-cache",
+      "1"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "command": [
+      "timeout",
+      "60",
+      "git",
+      "-c",
+      "credential.helper=",
+      "-c",
+      "credential.helper=!gh auth git-credential",
+      "ls-remote",
+      "https://github.com/Tamdoma/varhop-prompts.git",
+      "HEAD"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "command": [
+      "timeout",
+      "60",
+      "git",
+      "-c",
+      "credential.helper=",
+      "-c",
+      "credential.helper=!gh auth git-credential",
+      "-C",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/live-cache/slot-b",
+      "cat-file",
+      "-p",
+      "030140c219b1b4ff84b7486287ae5c8684ba20f1:prompts/coding/review/code-review.md"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "command": [
+      "timeout",
+      "60",
+      "git",
+      "-c",
+      "credential.helper=",
+      "-c",
+      "credential.helper=!gh auth git-credential",
+      "-C",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/live-cache/slot-b",
+      "cat-file",
+      "-p",
+      "030140c219b1b4ff84b7486287ae5c8684ba20f1:prompts/email/cold-email.md"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "command": [
+      "timeout",
+      "60",
+      "git",
+      "-c",
+      "credential.helper=",
+      "-c",
+      "credential.helper=!gh auth git-credential",
+      "-C",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/live-cache/slot-b",
+      "cat-file",
+      "-p",
+      "030140c219b1b4ff84b7486287ae5c8684ba20f1:prompts/writing/rewrite-clearly.md"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "command": [
+      "timeout",
+      "60",
+      "git",
+      "-c",
+      "credential.helper=",
+      "-c",
+      "credential.helper=!gh auth git-credential",
+      "-C",
+      "/tmp/akr-1000/5c3c/027206a6/varhop-recheck-_9nyrc4s/live-cache/slot-b",
+      "cat-file",
+      "-p",
+      "030140c219b1b4ff84b7486287ae5c8684ba20f1:prompts/writing/summarize.md"
+    ],
+    "exit": 0,
+    "stderr": ""
+  },
+  {
+    "live-sync-accept": "PASS",
+    "commit": "030140c219b1b4ff84b7486287ae5c8684ba20f1",
+    "byte-identical-files": 4,
+    "identity-mismatch": "PASS exit 5, no cache created",
+    "grant": "readiness.yaml grants[0], gh keyring ivanjuras, Tamdoma/varhop-prompts read-only; no external mutations or created IDs"
+  },
+  {
+    "cleanup": "TemporaryDirectory removed all local fixtures and caches; retained GitHub repo unchanged"
+  }
+]

@@ -1,0 +1,13 @@
+Local contract probe: bin/varhop-sync accept temporary cache 1; no gh or live cache touched.
+accept exit: 0
+{"accepted":1}
+
+staged exists after accept: False
+library exists: True
+Extracted unchanged Varhop.qml close/finishSync functions, boundary objects supplied for observation. exit: 0
+COPY_SUCCESS_THEN_CLOSE_DRAFT {"promptId":"prompts/dev/code-review.md","values":{"LANGUAGE":"python"}}
+FINISH_SYNC_READS [{"path":"/tmp/akr-1000/5c3c/7c0e9f04/varhop-review-sync-w6e0silk/staged-1.json","exists":false}]
+FINISH_SYNC_VIEW settings
+
+
+Temporary cache cleaned. Directory absence checked: True

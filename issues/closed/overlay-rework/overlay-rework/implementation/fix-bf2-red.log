@@ -1,0 +1,6 @@
+PASS   : qmltestrunner::VarhopViews::initTestCase()
+FAIL!  : qmltestrunner::VarhopViews::test_editor_rejected_shift_delete_keeps_clipboard() 'X should be "SENTINEL", is "A value b"' returned FALSE. ()
+   Loc: [/home/ivan/.akrogon/worktrees/varhop/overlay-rework/qml/tst_views.qml(241)]
+PASS   : qmltestrunner::VarhopViews::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 1784ms
+exit 1

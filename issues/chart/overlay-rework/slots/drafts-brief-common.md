@@ -1,0 +1,5 @@
+# Leaf draft review brief (chart overlay-rework)
+
+The operator approved two leaves (CHART.md Handoff choices). Drafts: /tmp/claude-1000/-home-ivan-Work-omarchy-customizations-varhop/876e73e3-0fa0-4750-9275-e3f55533374e/scratchpad/drafts/overlay-plugin/{brief.md,design.md,readiness.yaml,state.yaml} and /tmp/claude-1000/-home-ivan-Work-omarchy-customizations-varhop/876e73e3-0fa0-4750-9275-e3f55533374e/scratchpad/drafts/overlay-rework/{same}.
+Review each draft as the implementer who must deliver it. Report only disagreements, each with evidence (file:line or fork record) and the exact replacement text you propose. Check: every criterion is achievable within the leaf's ownership and dependencies; every fork Taken (forks/*.md) is reflected correctly in the brief; no criterion names a test file, assertion or count; live criteria name the shared resource; machinery rule (/home/ivan/.claude/skills/chart-issues/assets/standing-design.md); grants cover every operation the criteria need; nothing touches issues/.
+Do not edit the drafts. Keep it short. If none, write "none".

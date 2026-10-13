@@ -1,0 +1,17 @@
+F14 after: bun test test/views.test.ts test/copier.test.ts
+Exit: 0
+Byte/absence equality: clipboard=True, primary=True
+bun test v1.4.3 (c6da4a4d3)
+
+test/views.test.ts:
+(pass) view component checks pass under qmltestrunner on wayland [5563.82ms]
+
+test/copier.test.ts:
+(pass) copier reports failure for exit!=0, failed start and timeout [1052.61ms]
+
+ 2 pass
+ 0 fail
+ 4 expect() calls
+Ran 2 tests across 2 files. [6.62s]
+
+Both selections restored and byte/absence checked. Original bytes not logged.

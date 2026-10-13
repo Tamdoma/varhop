@@ -1,0 +1,6 @@
+# Fork notes brief: proof-bar (chart overlay-rework)
+
+Write blind fork notes for the questions in /home/ivan/Work/omarchy-customizations/varhop/issues/chart/overlay-rework/forks/proof-bar.md (Question and Carries only).
+Note shape: "Blind peer exchange" in /home/ivan/.claude/skills/chart-issues/assets/questions.md (five parts per question).
+Permitted context: /home/ivan/Work/omarchy-customizations/varhop/issues/chart/overlay-rework/INTAKE.md, /home/ivan/Work/omarchy-customizations/varhop/issues/chart/overlay-rework/slots/map-merged.md, /home/ivan/Work/omarchy-customizations/varhop/issues/chart/overlay-rework/forks/disposal.md, /home/ivan/Work/omarchy-customizations/varhop/issues/chart/overlay-rework/archive/overlay-plugin/ (report, reviews, design, readiness), /home/ivan/Work/omarchy-customizations/varhop/issues/chart/varhop/ (proofs-overlay.md, forks), the worktree /home/ivan/.akrogon/worktrees/varhop/overlay-plugin, the installed Omarchy at /usr/share/omarchy and its bin/ helpers (for example omarchy-dev-install-ydoo), and outside sources on Wayland input injection (ydotool, uinput, wlr virtual pointer, Hyprland layer surfaces). Read-only probes are fine; do not install anything or change desktop state.
+Do not read other slots' proof-bar notes. Write only your return file.

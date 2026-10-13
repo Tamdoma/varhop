@@ -1,0 +1,8 @@
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.12.0, Qt 6.12.0 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 16.2.1 20260810), omarchy 4.0.0.r6912.gdefbf90
+PASS   : qmltestrunner::VarhopCard::initTestCase()
+FAIL!  : qmltestrunner::VarhopCard::test_review_plain_tab_esc_returns_field() 'Esc after plain Tab must restore query field focus' returned FALSE. ()
+   Loc: [/tmp/akr-1000/5c3c/64dcfe16/varhop-review-B-0rcoq6qo/tst_probe.qml(402)]
+PASS   : qmltestrunner::VarhopCard::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 612ms
+********* Finished testing of qmltestrunner *********

@@ -1,0 +1,22 @@
+bun test v1.4.3 (c6da4a4d3)
+
+test/keyboard.test.ts:
+27 |   expect(listed(name)).toBe(false);
+28 | });
+29 | 
+30 | test("a usage error exits 2 with its message and no result line", () => {
+31 |   const result: ReturnType<typeof Bun.spawnSync> = Bun.spawnSync({cmd: [process.execPath, `${import.meta.dir}/keyboard.ts`, "--device", "kbd"]});
+32 |   expect(result.exitCode).toBe(2);
+                               ^
+error: expect(received).toBe(expected)
+
+Expected: 2
+Received: 1
+
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/keyboard.test.ts:32:27)
+(fail) a usage error exits 2 with its message and no result line [6.13ms]
+
+ 3 pass
+ 1 fail
+ 7 expect() calls
+Ran 4 tests across 1 file. [215.00ms]

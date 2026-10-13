@@ -1,0 +1,26 @@
+state: inconsistent
+command:
+  - akrogon
+  - run-check
+  - --name
+  - test
+  - --
+  - sh
+  - -c
+  - "flock \"$(git rev-parse --git-path akrogon-install.lock)\" sh -c 'bun install' && akrogon guard own-modules && sh -c 'bun test --pass-with-no-tests'"
+cwd: /home/ivan/.akrogon/worktrees/varhop/overlay-rework
+scope: whole bun test, leaf scope
+material: "Wayland session (HDMI-A-1, DP-2, DP-1), host load average 161-198 from other sessions' runs; same command, args and cwd on both runs"
+leaf_revision: 0be8ca43d9c88c2a98d809ef6bc7070479377b62
+log: /home/ivan/Work/omarchy-customizations/varhop/issues/open/overlay-rework/overlay-rework/implementation/check-test-1791910979448-939082.log
+run:
+  complete: true
+# First run: 83 pass, 1 fail. tst_card.qml under qmltestrunner stalled after
+# test_search_settings_round_trip_three_ways and hit the 60 s bun timeout; the
+# primary-selection restore then exited null. Three direct tst_card runs right
+# after, at load 177, passed 15/15 in about 2 s each. Retry green 84/84.
+retry:
+  log: /home/ivan/Work/omarchy-customizations/varhop/issues/open/overlay-rework/overlay-rework/implementation/check-test-1791918676207-1477448.log
+  complete: true
+  outcome: pass
+units: []

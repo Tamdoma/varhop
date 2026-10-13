@@ -1,0 +1,6 @@
+PASS   : qmltestrunner::VarhopViews::initTestCase()
+FAIL!  : qmltestrunner::VarhopViews::test_settings_tab_scrolls_focused_control_into_view() 'resetUsageButton is inside the visible area, top 426 height 28' returned FALSE. ()
+   Loc: [/home/ivan/.akrogon/worktrees/varhop/overlay-rework/qml/tst_views.qml(887)]
+PASS   : qmltestrunner::VarhopViews::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 374ms
+exit 1

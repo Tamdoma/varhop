@@ -1,0 +1,9 @@
+bun test v1.4.3 (c6da4a4d3)
+
+test/clipboard.test.ts:
+(pass) nonempty clipboard and primary restoration completes and preserves bytes [24.18ms]
+
+ 1 pass
+ 0 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [28.00ms]

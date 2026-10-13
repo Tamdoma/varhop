@@ -1,0 +1,18 @@
+Grant: readiness.yaml desktop grant, local ivan, quickshell -p temporary config. No shell config, plugin install, clipboard or primary mutated.
+Probe: same Copier instance sends first then second to cat (the normal stdin-consuming command boundary).
+Exit: 1
+  INFO: Launching config: "/tmp/akr-1000/5c3c/7c0e9f04/varhop-review-ny8q83ad/probe.qml"
+  INFO: Shell ID: "7818199e8ae2480d904219f3493a3e10" Path ID "7818199e8ae2480d904219f3493a3e10"
+  INFO: Saving logs to "/run/user/1000/quickshell/by-id/3foi127otmt/log.qslog"
+  WARN quickshell.qmlscanner: Ignoring unresolvable import "/tmp/akr-1000/5c3c/7c0e9f04/varhop-review-ny8q83ad/file:/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/qml" from "/tmp/akr-1000/5c3c/7c0e9f04/varhop-review-ny8q83ad/probe.qml"
+  WARN: <Unknown File>: QML ProxyFloatingWindow: Setting `width` is deprecated. Set `implicitWidth` instead.
+  WARN: <Unknown File>: QML ProxyFloatingWindow: Setting `height` is deprecated. Set `implicitHeight` instead.
+  INFO: Configuration Loaded
+  WARN qt.qpa.services: Failed to register with host portal QDBusError("org.freedesktop.portal.Error.Failed", "Could not register app ID: Connection already associated with an application ID")
+ DEBUG qml: COPY_DONE 1
+ DEBUG qml: COPY_FAILED copy timed out after 1000 ms
+
+
+copy-1: b'first'
+copy-2: b'second'
+Temporary config and outputs removed; directory absence checked after cleanup: True

@@ -1,0 +1,5 @@
+# Split rebuttal, Slot B
+
+- The “no parallel feature leaves” agreement overstates my position and gives the wrong reason. Drain allows independently checkable outcomes in parallel, and my notes explicitly allow that after a separately accepted base landing. Sharing one desktop serializes live sessions, not feature implementation. Replace the absolute claim with: B recommends bundling the rework under the chosen successor to avoid a separate intermediate base landing. The base is a real prerequisite for main-based feature branches, not proof that feature leaves can never run in parallel.
+
+- A reusable sender alone is not the full machinery outcome I proposed. The prerequisite must demonstrate an observable expected input result and detect its deliberate break, with cleanup on both outcomes. A successful send call or device creation is insufficient. Proof-bar's recorded probe explicitly does not prove final resume/copy behavior. Keep those final assertions with the product owner, while naming the prerequisite's concrete observation and cleanup support before handoff.

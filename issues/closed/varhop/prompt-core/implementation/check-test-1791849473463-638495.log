@@ -1,0 +1,76 @@
+bun install v1.4.3 (c6da4a4d3)
+
+[1.00ms] done
+bun test v1.4.3 (c6da4a4d3)
+[0.01ms] ".env"
+No packages! Deleted empty lockfile
+
+lib/rebuild.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module './tokens.mjs' from '/home/ivan/.akrogon/worktrees/varhop/prompt-core/lib/rebuild.test.ts'
+-------------------------------
+
+
+lib/tokens.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module './tokens.mjs' from '/home/ivan/.akrogon/worktrees/varhop/prompt-core/lib/tokens.test.ts'
+-------------------------------
+
+
+lib/import.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module './import.mjs' from '/home/ivan/.akrogon/worktrees/varhop/prompt-core/lib/import.test.ts'
+-------------------------------
+
+
+lib/search.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module './import.mjs' from '/home/ivan/.akrogon/worktrees/varhop/prompt-core/lib/search.test.ts'
+-------------------------------
+
+
+lib/usage.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+error: Cannot find module './usage.mjs' from '/home/ivan/.akrogon/worktrees/varhop/prompt-core/lib/usage.test.ts'
+-------------------------------
+
+
+lib/qml.test.ts:
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+QQmlApplicationEngine failed to load component
+file:///home/ivan/.akrogon/worktrees/varhop/prompt-core/lib/qml-smoke.qml:2:1: Script file:///home/ivan/.akrogon/worktrees/varhop/prompt-core/lib/import.mjs unavailable
+file:///home/ivan/.akrogon/worktrees/varhop/prompt-core/lib/import.mjs: No such file or directory
+
+12 |     stdout: "pipe",
+13 |     stderr: "pipe",
+14 |   });
+15 |   if (res.exitCode !== 0)
+16 |     console.error(res.stderr.toString());
+17 |   expect(res.exitCode).toBe(0);
+                            ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 2
+
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/prompt-core/lib/qml.test.ts:17:24)
+(fail) every exported module loads in the QML engine and a smoke call exits 0 [50.02ms]
+
+ 0 pass
+ 6 fail
+ 5 errors
+ 1 expect() calls
+Ran 6 tests across 6 files. [56.00ms]

@@ -1,0 +1,28 @@
+slug: repo-sync
+phase: merged
+created: 2026-10-13
+repo: varhop
+debate: "no"
+blocked-by: []
+sources: []
+busy_since: {}
+busy_notified: {}
+attempts:
+  A: 0
+  B: 0
+done: []
+fix_rounds: 1
+verdict: {}
+tab: wK:t6
+env_names: []
+env_generation: 0
+pane:
+  A: wK:p9
+  B: wK:pA
+prompted: {}
+prompted_at: {}
+delivery_error: {}
+merge_stamp: 2026-10-13T00:05:08.621Z
+frozen:
+  test/sync.test.ts: fb54ea9521895e68e3559f09888ea955f9417bc9
+frozen_cited: []

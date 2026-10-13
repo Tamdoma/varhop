@@ -1,0 +1,173 @@
+inputs: []
+produces: []
+grants:
+  - approved:
+      by: operator
+      date: 2026-10-13
+      answer: "proof-bar 3a and handoff review 3a (2026-10-13): varhop-prompts-b read-only, retained until the successor merges"
+    principal: implementing agent on the operator machine
+    account: github.com/ivanjuras (id 6634086)
+    credential:
+      name: gh keyring login (ivanjuras)
+      holder: gh keyring on the operator machine
+    targets: [github.com/Tamdoma/varhop-prompts (id 1416196860), github.com/Tamdoma/varhop-prompts-b (id 1416586635), "GET /user/repos", "GET /user"]
+    fixtures: []
+    operations: ["gh auth status --json hosts", "gh api /user", "gh api /user/repos --paginate", "gh api repos/<target>", "git clone --depth 1 / fetch --depth 1 with the command-scoped gh credential helper", "bin/varhop-sync status | repos | repo | sync | accept"]
+    effects: read-only; no pushes, no repo settings, no billing, public or DNS effects
+    bounds: reads only, each under a timeout; no retries beyond the CLI design
+    stop_line: never push to, create, rename or delete any GitHub repo; never run gh auth login/logout/refresh
+  - approved:
+      by: operator
+      date: 2026-10-13
+      answer: "proof-bar 1a-4a, controls 1a, split 1b, handoff review 3a (2026-10-13)"
+    principal: implementing agent on the operator machine
+    account: local user ivan, omarchy-shell session
+    credential:
+      name: none
+      holder: none
+    targets: ["~/.config/omarchy/plugins/ivan.varhop (retained install, moved in place)", "~/.config/omarchy/shell.json plugins entry ivan.varhop", "~/.cache/varhop", "~/.local/state/varhop", "Wayland clipboard and primary selection", "omarchy-shell session (restart)", "/dev/uinput (virtual keyboard)"]
+    fixtures:
+      - account: local user ivan
+        purpose: backup of the operator's cache, state and shell.json entry before any writing check
+        marker: backup folder under the leaf's scratch, path recorded in the report before creation
+        naming: <leaf scratch>/varhop-backup (1)
+        count: 1
+        cleanup:
+          - step: restore ~/.cache/varhop and ~/.local/state/varhop from the backup, put back the ivan.varhop entry with jq (temp+rename, other bytes compared), then delete the backup folder
+            identity: local user ivan
+        absence_check: cache, state and the ivan.varhop entry byte-equal to the backup before deletion; backup folder absent after
+      - account: local user ivan
+        purpose: virtual keyboard for live input
+        marker: uinput device name starting varhop-
+        naming: varhop-<leaf>-kbd (1 at a time)
+        count: 1
+        cleanup:
+          - step: close the device on success and failure
+            identity: local user ivan
+        absence_check: no input device named varhop-* in /proc/bus/input/devices
+    operations: [omarchy-plugin-validate, "git -C ~/.config/omarchy/plugins/ivan.varhop remote set-url origin file://<leaf worktree>, fetch, reset --hard <leaf commit>; last step set-url origin file:///home/ivan/Work/omarchy-customizations/varhop with no fetch", omarchy-restart-shell, "omarchy-shell shell summon/hide/toggle ivan.varhop", "hyprctl layers/binds/activewindow/devices", "hyprctl dispatch hl.dsp.send_key_state, focus and cursor.move", "uinput keyboard helper", wtype, "jq edit of the ivan.varhop entry only (temp+rename, other bytes compared)", qmltestrunner on wayland, "quickshell -p <test config>", "pkill -f varhop-sync (only the run's own sync child)", "grim cropped to the overlay", "wl-copy/wl-paste incl. --primary with save and restore", "journalctl --user read", bin/varhop-sync]
+    effects: local only; the overlay appears on the operator screens; the bar and overlays restart for a few seconds on each omarchy-restart-shell and open notifications are lost; clipboard briefly replaced then restored; synthetic keys go to the focused surface
+    bounds: one live run at a time; omarchy-restart-shell only when the session is unlocked and only to load new plugin code; synthetic keys only while the overlay is focused (checked with hyprctl activewindow/layers before sending); clipboard restored after every check; no edits to ~/.config/hypr
+    stop_line: never remove or disable the installed plugin; never edit ~/.config/hypr, other plugins or other shell.json entries; never change the Omarchy theme; never restart Hyprland; never write to GitHub; never delete a path this run did not create
+retained:
+  - resources: [github.com/Tamdoma/varhop-prompts (private, id 1416196860)]
+    purpose: the operator's starter prompt library, the read-only target of every real-call criterion
+    owner: operator (Tamdoma organization)
+    remove_by: none, it is the operator's live library and not a disposable fixture
+    cost: none (private repo in an existing organization)
+    exposure: Tamdoma organization members
+    cleanup:
+      identity: operator
+      route: the operator deletes or keeps it on GitHub by hand
+    reason: retained by agreement at creation (proofs-sync.md); leaves only read it
+  - resources: [github.com/Tamdoma/varhop-prompts-b (private, id 1416586635)]
+    purpose: second readable prompts repo for the repo-switch criterion
+    owner: operator (Tamdoma organization)
+    remove_by: none, kept until overlay-rework merges and then the operator's call
+    cost: none (private repo in an existing organization)
+    exposure: Tamdoma organization members
+    cleanup:
+      identity: operator
+      route: the operator deletes or keeps it on GitHub by hand
+    reason: proof-bar 3a, read-only retained target
+proofs:
+  - operation: uinput keyboard into the focused overlay
+    command: python3 + python-evdev UInput keyboard varhop-probe-kbd; omarchy-shell shell summon ivan.varhop; keys a b c Left Shift+Left x Ctrl+V; Esc Esc
+    identity: local user ivan, /dev/uinput ACL user:ivan:rw-
+    target: omarchy-shell session, installed ivan.varhop at 0df6f48
+    version: Quickshell 0.3.2, Qt 6.12.0, Hyprland 0.56.2
+    date: 2026-10-13
+    result: search field read axVHPROBEc; overlay hidden after Esc Esc
+    cleanup: device closed, screenshot deleted, clipboard cleared (nothing to restore)
+    limits: current search field only; Super+C/V binds, resume and pointer clicks not covered
+    record: issues/chart/overlay-rework/forks/proof-bar.md
+  - operation: repoint a plugin clone to another file:// source
+    command: git remote set-url origin file:///home/ivan/.akrogon/worktrees/varhop/overlay-plugin; git fetch origin overlay-plugin; git reset --hard FETCH_HEAD (on a scratch clone of the installed plugin)
+    identity: local user ivan
+    target: scratch clone
+    version: git 2.56.0
+    date: 2026-10-13
+    result: HEAD 0df6f48, origin changed; installed clone untouched
+    cleanup: scratch deleted
+    limits: non-fast-forward target not exercised; shell reload proven separately (restart rows 18-19)
+    record: issues/chart/overlay-rework/forks/proof-bar.md
+  - operation: read the second prompts repo
+    command: env -u GH_TOKEN -u GITHUB_TOKEN git -c credential.helper= -c "credential.helper=!gh auth git-credential" clone --depth 1 https://github.com/Tamdoma/varhop-prompts-b.git; gh api repos/Tamdoma/varhop-prompts-b
+    identity: gh login ivanjuras
+    target: github.com/Tamdoma/varhop-prompts-b (id 1416586635)
+    version: gh 2.102.0, git 2.56.0
+    date: 2026-10-13
+    result: clone exit 0, head 5a334fa, prompts/testing/second-repo.md; private, main, not archived
+    cleanup: scratch clone deleted
+    limits: varhop-sync two-slot switch with a draft not covered
+    record: issues/chart/overlay-rework/forks/proof-bar.md
+  - operation: list repos
+    command: env -u GH_TOKEN -u GITHUB_TOKEN -u GH_HOST -u GH_REPO gh api "/user/repos?per_page=100" --paginate
+    identity: gh login ivanjuras
+    target: github.com
+    version: gh as installed 2026-10-13
+    date: 2026-10-13
+    result: lists Tamdoma/varhop-prompts private id 1416196860
+    cleanup: none (read)
+    limits: picker UI and very large lists not covered
+    record: issues/chart/varhop/proofs-sync.md
+  - operation: gh login status and scopes
+    command: env -u GH_TOKEN -u GITHUB_TOKEN gh auth status --json hosts (real login, then empty GH_CONFIG_DIR)
+    identity: gh login ivanjuras
+    target: github.com
+    version: gh 2.102.0
+    date: 2026-10-13
+    result: logged in gives state success, login ivanjuras, scopes "gist, read:org, repo, workflow"; logged out gives exit 0 and {"hosts":{}}
+    cleanup: temp GH_CONFIG_DIR deleted
+    limits: expired-token state not observed
+    record: issues/chart/varhop/proofs-sync.md
+  - operation: shallow clone and pull with command-scoped gh helper and neutralized attributes
+    command: git -c credential.helper= -c "credential.helper=!gh auth git-credential" clone --depth 1 --no-checkout; info/attributes "prompts/** -text -filter -ident -working-tree-encoding"; fetch --depth 1 origin HEAD; reset --hard FETCH_HEAD
+    identity: gh login ivanjuras
+    target: github.com/Tamdoma/varhop-prompts
+    version: git and gh as installed 2026-10-13
+    date: 2026-10-13
+    result: clone ok, 5 files byte-identical to blobs, pull picked up 030140c, no-helper clone fails in 0.2s with prompts disabled, eol=crlf ident fixture neutralized
+    cleanup: scratch clones deleted
+    limits: two-slot switch logic and filter drivers not covered
+    record: issues/chart/varhop/proofs-sync.md
+  - operation: third-party overlay plugin summon/hide/toggle and panel bind
+    command: copy plugin folder, omarchy-plugin-validate, omarchy-plugin-enable, omarchy-shell shell summon/hide/toggle ivan.varhop-probe, o.bind SUPER+ALT+P panel line + hyprctl reload, physical press by operator
+    identity: local user ivan
+    target: omarchy-shell session
+    version: omarchy 4.0.0.r6912.gdefbf90-1, Hyprland 0.56.2-4, Quickshell 0.3.2-4, Qt 6.12.0-2
+    date: 2026-10-13
+    result: overlay shown and hidden by own id, typing focus, keepLoaded state kept, physical bind opened and closed it with text kept
+    cleanup: plugin removed, backup folder deleted, shell.json and bindings.lua sha256 equal pre-proof values
+    limits: first-open layer on the other two monitors not observed; symlinked plugin folders are rejected
+    record: issues/chart/varhop/proofs-overlay.md
+  - operation: wl-copy through stdin
+    command: wl-copy --type "text/plain;charset=utf-8" < file; wl-paste --no-newline
+    identity: local user ivan
+    target: Wayland clipboard
+    version: wl-clipboard as installed 2026-10-13
+    date: 2026-10-13
+    result: CRLF, UTF-8 and trailing newlines byte-identical; empty input exit 0
+    cleanup: prior clipboard text restored and verified
+    limits: copy from inside a QML Process not covered
+    record: issues/chart/varhop/proofs-sync.md
+  - operation: git install, update, Super+C/V key-state route
+    command: omarchy plugin add file://<scratch repo> --enable --yes; omarchy plugin update <id> --yes; hyprctl dispatch 'hl.dsp.send_key_state({ mods, key, state })' down/up; omarchy-plugin-remove --yes
+    identity: local user ivan
+    target: omarchy-shell session, disposable plugins ivan.varhop-probe and ivan.varhop-probe2
+    version: omarchy 4.0.0.r6912.gdefbf90-1, Hyprland 0.56.2-4, Quickshell 0.3.2-4, Qt 6.12.0-2
+    date: 2026-10-13
+    result: add and update work from file://, entry byte-identical across update; Ctrl+V, Ctrl+Shift+V, Ctrl+Shift+C reach the focused overlay with exact modifiers; updated code does not load until omarchy-restart-shell, which loads it (rows 18-19)
+    cleanup: both removed, no backup folders, shell.json sha256 and clipboard equal pre-run values
+    limits: physical Super key not exercised
+    record: issues/chart/varhop/proofs-overlay.md
+  - operation: qmltestrunner component checks and text input routes
+    command: QT_QPA_PLATFORM=wayland qmltestrunner -input <file>; wtype; hl.dsp.send_key_state
+    identity: local user ivan
+    target: short-lived test windows
+    version: qt6-declarative 6.12.0-1
+    date: 2026-10-13
+    result: real-clipboard Ctrl+V paste works in the runner; synthetic middle-click does not paste; č arrives through the fcitx5 path; dead-key composition not reachable
+    cleanup: clipboard and primary restored (byte compare)
+    limits: middle-click paste and dead keys are not agent-provable on this machine
+    record: issues/chart/varhop/proofs-overlay.md

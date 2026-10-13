@@ -1,0 +1,4 @@
+F13 after: bash test/make-library.sh 2 1416196860 6634086 ivanjuras <temporary>/library.json; actual importLibrary verifies metadata and 20KB bodies.
+Exit: 0
+{"errors":0,"count":2,"titles":["Prompt 1","Prompt 2"],"bodyBytes":[12,20480]}
+Temporary fixture directory removed; absence: True

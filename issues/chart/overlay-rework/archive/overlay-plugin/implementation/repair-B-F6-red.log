@@ -1,0 +1,48 @@
+bun test v1.4.3 (c6da4a4d3)
+
+test/views.test.ts:
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.12.0, Qt 6.12.0 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 16.2.1 20260810), omarchy 4.0.0.r6912.gdefbf90
+PASS   : qmltestrunner::VarhopViews::initTestCase()
+PASS   : qmltestrunner::VarhopViews::test_chord_field_states()
+PASS   : qmltestrunner::VarhopViews::test_editor_copy_failure_keeps_draft()
+PASS   : qmltestrunner::VarhopViews::test_editor_delete_reset_and_undo()
+PASS   : qmltestrunner::VarhopViews::test_editor_paste_multiline_and_mirror_click()
+PASS   : qmltestrunner::VarhopViews::test_editor_right_click_paste()
+PASS   : qmltestrunner::VarhopViews::test_editor_tab_wrap_and_mirror()
+FAIL!  : qmltestrunner::VarhopViews::test_editor_zero_variable_calls_copier() 'function returned false' returned FALSE. ()
+   Loc: [/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/qml/tst_views.qml(227)]
+PASS   : qmltestrunner::VarhopViews::test_editor_zero_variable_requests_copy()
+PASS   : qmltestrunner::VarhopViews::test_plain_text_format()
+PASS   : qmltestrunner::VarhopViews::test_search_esc_clear_then_hide()
+PASS   : qmltestrunner::VarhopViews::test_search_field_paste_copy_chords()
+PASS   : qmltestrunner::VarhopViews::test_search_resume_row_and_result_click()
+PASS   : qmltestrunner::VarhopViews::test_search_rows_show_details()
+PASS   : qmltestrunner::VarhopViews::test_settings_failed_pull_and_merged_errors()
+PASS   : qmltestrunner::VarhopViews::test_settings_field_paste_copy_chords()
+PASS   : qmltestrunner::VarhopViews::test_settings_logged_out_shows_fix()
+PASS   : qmltestrunner::VarhopViews::cleanupTestCase()
+Totals: 17 passed, 1 failed, 0 skipped, 0 blacklisted, 1156ms
+********* Finished testing of qmltestrunner *********
+Test '"/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/qml/tst_views.qml"' window not active after requestActivate().
+
+24 |     timeout: 120_000,
+25 |   });
+26 |   const out = res.stdout.toString() + res.stderr.toString();
+27 |   if (res.exitCode !== 0 || !out.includes("Totals:") || !/Totals:.*0 failed/.test(out))
+28 |     console.error(out);
+29 |   expect(res.exitCode).toBe(0);
+                            ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/views.test.ts:29:24)
+      at withClipboardRestored (/home/ivan/.akrogon/worktrees/varhop/overlay-plugin/test/clipboard.ts:49:5)
+(fail) view component checks pass under qmltestrunner on wayland [6561.80ms]
+
+ 0 pass
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [6.57s]

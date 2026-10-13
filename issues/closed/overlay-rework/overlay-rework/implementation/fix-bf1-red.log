@@ -1,0 +1,6 @@
+PASS   : qmltestrunner::VarhopCard::initTestCase()
+FAIL!  : qmltestrunner::VarhopCard::test_plain_tab_to_header_then_esc_returns_to_input() 'Esc returns to the query field' returned FALSE. ()
+   Loc: [/home/ivan/.akrogon/worktrees/varhop/overlay-rework/qml/tst_card.qml(310)]
+PASS   : qmltestrunner::VarhopCard::cleanupTestCase()
+Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 289ms
+exit 1

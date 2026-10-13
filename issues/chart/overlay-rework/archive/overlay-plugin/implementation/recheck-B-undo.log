@@ -1,0 +1,12 @@
+Recheck head 360a9af: actual EditorBody under qmltestrunner. Source: edit LANGUAGE, Tab/edit DIFF, Shift+Tab to LANGUAGE, Ctrl+Z. Readiness desktop grant, user ivan. No clipboard commands or installed plugin/config changes.
+Exit: 0
+********* Start testing of qmltestrunner *********
+Config: Using QtTest library 6.12.0, Qt 6.12.0 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 16.2.1 20260810), omarchy 4.0.0.r6912.gdefbf90
+PASS   : qmltestrunner::RepairObservation::initTestCase()
+QDEBUG : qmltestrunner::RepairObservation::test_variable_local_undo() qml: BEFORE_UNDO {"active":"LANGUAGE","language":"p","diff":"d"}
+QDEBUG : qmltestrunner::RepairObservation::test_variable_local_undo() qml: AFTER_UNDO {"active":"LANGUAGE","language":"p","diff":""}
+PASS   : qmltestrunner::RepairObservation::test_variable_local_undo()
+PASS   : qmltestrunner::RepairObservation::cleanupTestCase()
+Totals: 3 passed, 0 failed, 0 skipped, 0 blacklisted, 62ms
+********* Finished testing of qmltestrunner *********
+Temporary config removed; directory absence checked: True

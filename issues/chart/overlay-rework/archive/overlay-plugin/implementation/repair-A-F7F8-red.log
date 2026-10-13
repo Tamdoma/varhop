@@ -1,0 +1,10 @@
+Red run: qmltestrunner -input qml/tst_views.qml (with the two new cases) on head 62e9d0e (pre-fix).
+
+FAIL! : VarhopViews::test_editor_draft_carries_undo_history() 'captured draft carries undo history for X' returned FALSE.
+  Loc: qml/tst_views.qml — captureDraft carried no histories/redos before the fix.
+
+FAIL! : VarhopViews::test_search_query_property_tracks_typing() typing updates the public query
+  Actual (): ''  Expected (): 'co'
+  Loc: qml/tst_views.qml(139) — queryField.onTextChanged never assigned root.query.
+
+Totals: 24 passed, 2 failed.

@@ -1,0 +1,34 @@
+slug: prompt-core
+phase: merged
+created: 2026-10-13
+repo: varhop
+debate: "no"
+blocked-by: []
+sources: []
+busy_since: {}
+busy_notified: {}
+attempts:
+  A: 0
+  B: 0
+done: []
+fix_rounds: 1
+verdict: {}
+tab: wK:t5
+env_names: []
+env_generation: 0
+pane:
+  A: wK:p7
+  B: wK:p8
+prompted: {}
+prompted_at: {}
+delivery_error: {}
+merge_stamp: 2026-10-13T00:33:42.650Z
+frozen:
+  lib/import.test.ts: a3a031a55cdcf5cb21885e3495a73453e40165bc
+  lib/qml-smoke.qml: 3b771a08d6094f289e6cfe3aa41f7a2f2b93d04a
+  lib/qml.test.ts: c302c5fa0506b460011f6cfd34430409c0ed708e
+  lib/rebuild.test.ts: 0d32e507b286252ae62535b1ab39f632bcbc081e
+  lib/search.test.ts: 1b748bc7570a2926b63526f2861619ec6ef37e6c
+  lib/tokens.test.ts: eec3a49023b3869b0c88020867b11637fd7b563a
+  lib/usage.test.ts: fbcd7807fd02ca140e776ebdba76af41b4087be6
+frozen_cited: []

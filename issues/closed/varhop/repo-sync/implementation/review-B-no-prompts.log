@@ -1,0 +1,10 @@
+Source scenario: user selects a nonempty repo whose prompts/ contains only prompts/notes/draft.txt (non-Markdown draft).
+Command: bin/varhop-fetch file://<temp>/source <temp>/cache 1416196860 6634086 ivanjuras 1
+Exit: 0
+Stdout: {"status":"ok","login":"ivanjuras","accountId":6634086,"repo":"varhop-review-yu20ua2q/source","repoId":1416196860,"commit":"17001033d5aec128ff879eb2b6f04c314682f9ad","fetchedAt":1791849672178,"generation":1,"staged":"/tmp/akr-1000/5c3c/027206a6/varhop-review-yu20ua2q/cache/staged-1.json"}
+Stderr: 
+Staged status: ok
+Staged files: []
+Staged errors: []
+Expected per plan D5: no-prompts, staged, exit 0.
+Temporary fixture and cache removed by TemporaryDirectory cleanup.

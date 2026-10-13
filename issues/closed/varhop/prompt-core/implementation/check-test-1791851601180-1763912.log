@@ -1,0 +1,97 @@
+bun install v1.4.3 (c6da4a4d3)
+
+[0.00ms] done
+bun test v1.4.3 (c6da4a4d3)
+[0.00ms] ".env"
+No packages! Deleted empty lockfile
+
+lib/import.test.ts:
+(pass) thematic break fixture: --- + prose + --- = header, prose errors, body follows [0.46ms]
+(pass) empty-header escape: a body starting with --- survives verbatim [0.04ms]
+(pass) unclosed --- is all body plus an unclosed error [0.04ms]
+(pass) title with ': ' must be quoted; unquoted ': ' errors and title defaults [0.11ms]
+(pass) comment stripping requires a space before # [0.03ms]
+(pass) description: | is an unsupported known key; title still parses [0.03ms]
+(pass) BOM then leading blank lines means no header; BOM is stripped, body verbatim [0.03ms]
+(pass) BOM without a header leaves body unchanged after stripping [0.05ms]
+(pass) BOM before a CRLF header parses, body keeps CRLF and no final newline [0.08ms]
+(pass) duplicate title: first wins, second gets an error [0.03ms]
+(pass) mixed-type flow tags coerce to strings and drop duplicates [0.13ms]
+(pass) indentless and indented block tags, plus a single scalar tag [0.06ms]
+(pass) paths: category and optional subcategory, deeper errors, rest ignored [0.06ms]
+(pass) a prompt carries names and precomputed folded search fields [0.08ms]
+(pass) unknown metadata continuation lines are ignored without hiding known-key errors [0.03ms]
+(pass) comments after empty metadata values stay absent and block tags still parse [0.02ms]
+
+lib/qml.test.ts:
+(pass) every exported module loads in the QML engine and a smoke call exits 0 [22.50ms]
+
+lib/rebuild.test.ts:
+(pass) with no values the body is reproduced exactly and every name is unset [0.11ms]
+(pass) a CRLF body with no final newline round-trips [0.02ms]
+(pass) escapes come out as literal {{NAME}} and are not unset names [0.02ms]
+(pass) every occurrence of a name gets its value
+(pass) a value containing {{OTHER}} is inserted literally [0.01ms]
+(pass) an empty string is a set value, not unset
+(pass) unset names are reported in first-appearance order
+
+lib/search.test.ts:
+(pass) fold lowercases and strips diacritics, đ folds to d [0.03ms]
+(pass) a folded query matches diacritics in the library [0.38ms]
+(pass) terms are ANDed: every term must match some field [0.08ms]
+(pass) field weights run title > file name > tags > category/subcategory > description [0.18ms]
+(pass) fzf-V1 shape: tight subsequence beats scattered, no typo tolerance [0.06ms]
+(pass) queries and fields match case-insensitively [0.02ms]
+(pass) body tier: terms of 3+ chars match folded body when structured hits are few [0.06ms]
+(pass) terms shorter than 3 characters never reach the body [0.04ms]
+(pass) body tier is skipped once structured matches fill the display chunk [0.46ms]
+(pass) frecency reorders only within equal relevance [0.13ms]
+(pass) empty query: up to 10 recent copies by recency, then library by category [0.12ms]
+(pass) empty query caps the recent section at 10 [0.11ms]
+(pass) identical explicit titles score equally even when one equals the stem [0.03ms]
+
+lib/tokens.test.ts:
+(pass) splits a body into text and token segments [0.02ms]
+(pass) token names allow digits and underscores anywhere [0.02ms]
+(pass) {{{NAME}}} is literal brace, token, literal brace
+(pass) tokens inside code fences count [0.01ms]
+(pass) an escaped \{{NAME}} becomes a text segment holding the literal [0.02ms]
+(pass) backslash is removed only before a valid token [0.01ms]
+(pass) lowercase and malformed braces stay literal [0.03ms]
+(pass) uniqueNames lists names in first-appearance order [0.01ms]
+
+lib/usage.test.ts:
+(pass) HALF_LIFE_MS is 14 days in milliseconds
+(pass) resetUsage returns an empty v1 state
+(pass) recordCopy on an empty state starts the entry at score 1 [0.01ms]
+(pass) a repeat copy one half-life later decays the stored score by half [0.01ms]
+(pass) recordCopy does not decay untouched entries and does not mutate its input [0.02ms]
+(pass) parseUsage accepts a serialized state [0.08ms]
+(pass) parseUsage rejects malformed JSON and wrong shapes with an error [0.07ms]
+
+test/sync.test.ts:
+(pass) fetch + accept lifecycle > fetch stages without touching library; accept publishes; second fetch publishes new commit [86.69ms]
+(pass) fetch + accept lifecycle > accept of an unstaged generation exits non-zero and changes nothing; accept sweeps other staged files [71.00ms]
+(pass) fetch + accept lifecycle > a failed fetch exits non-zero with error JSON and preserves library and active slot [86.80ms]
+(pass) fetch + accept lifecycle > fetch of repo B left unaccepted keeps A's library and slot; later accept publishes B [113.94ms]
+(pass) fetch + accept lifecycle > failure between read and staged rename leaves no staged file and keeps previous bundle [69.97ms]
+(pass) fetch + accept lifecycle > checkout transforms from .gitattributes eol=crlf ident do not alter bundle text [37.35ms]
+(pass) repo states and file selection > empty repo stages status empty-repo with exit 0 [10.57ms]
+(pass) repo states and file selection > repo without prompts/ stages status no-prompts with exit 0 [31.50ms]
+(pass) repo states and file selection > symlinks, submodules and non-.md files are skipped; invalid UTF-8 errors while others load [54.61ms]
+(pass) repo states and file selection > repo with prompts/ but no usable markdown stages status no-prompts [32.44ms]
+(pass) repo states and file selection > files deeper than two levels and files directly under prompts/ become error entries [37.28ms]
+(pass) argument validation > sync refuses malformed repo '../x' with usage exit 2 [2.68ms]
+(pass) argument validation > sync refuses malformed repo 'a/b/c' with usage exit 2 [2.67ms]
+(pass) argument validation > sync refuses malformed repo '-x/y' with usage exit 2 [2.52ms]
+(pass) argument validation > sync refuses malformed repo 'a b/c' with usage exit 2 [2.52ms]
+(pass) argument validation > sync refuses malformed repo 'a;b/c' with usage exit 2 [2.67ms]
+(pass) argument validation > sync refuses malformed repo 'a/../c' with usage exit 2 [2.51ms]
+(pass) argument validation > sync refuses malformed repo './x' with usage exit 2 [2.47ms]
+(pass) argument validation > sync requires --generation and paired numeric expect flags [10.10ms]
+(pass) auth > empty GH_CONFIG_DIR: status reports unauthenticated with fix; sync exits auth without prompting [63.92ms]
+
+ 72 pass
+ 0 fail
+ 280 expect() calls
+Ran 72 tests across 7 files. [755.00ms]

@@ -323,7 +323,9 @@ Item {
                             : v === undefined ? "unset" : v === "" ? "empty" : "filled"
                     }
                     // A raw keystroke reflows the text before the guard pass
-                    // replaces ranges, so positions clamp to the current length.
+                    // replaces ranges; stale positions drift into blank lines,
+                    // so boxes hide until the ranges match the text again.
+                    visible: editorText.text === root._shown
                     readonly property rect a: {
                         editorText.contentWidth; editorText.contentHeight
                         return editorText.positionToRectangle(Math.min(modelData.start, editorText.length))

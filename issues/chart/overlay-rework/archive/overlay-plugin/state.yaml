@@ -1,0 +1,40 @@
+slug: overlay-plugin
+phase: failed
+created: 2026-10-13
+repo: varhop
+debate: "no"
+blocked-by:
+  - prompt-core
+  - repo-sync
+sources: []
+busy_since: {}
+busy_notified: {}
+attempts:
+  A: 0
+  B: 0
+done: []
+fix_rounds: 4
+verdict: {}
+tab: wK:t7
+worktree: /home/ivan/.akrogon/worktrees/varhop/overlay-plugin
+env_names: []
+env_generation: 0
+pane:
+  A: wK:pB
+  B: wK:pC
+prompted: {}
+prompted_at: {}
+delivery_error: {}
+frozen:
+  qml/tst_copier.qml: c1531442094241ade828182fd1a3e19ab2ee38a8
+  qml/tst_views.qml: b80c25da54aa603f00d4789b6790629e85b3152e
+  test/copier.test.ts: c5ced57c16f5f6030cb09d240b73214ab222164a
+  test/plugin.test.ts: 4eff63758a90285017ec82b8c7d041df45359aaa
+  test/views.test.ts: 91a27583813e1f333e097ad6b998196af8f98818
+frozen_cited: []
+failure:
+  cause: blocked
+  phase: check.fix
+  slot: A
+  reason: "F15 operator-only items remain: OA1 second-repo authorization, OA2 physical cursor/selection resume, OA3 physical browser/terminal paste, OA4 physical reset-button click (layer surfaces reject synthetic pointer clicks on this host). Doable live items (zero-byte all-empty export, write-failure) proven; see implementation/report.md."
+  delivery: shown
