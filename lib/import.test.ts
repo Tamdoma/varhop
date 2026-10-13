@@ -151,3 +151,14 @@ test("unknown metadata continuation lines are ignored without hiding known-key e
   expect(p.body).toBe("Body");
   expect(r.errors.map((e) => e.line)).toEqual([8]);
 });
+
+test("comments after empty metadata values stay absent and block tags still parse", () => {
+  const {r, p} = one(
+    "prompts/c/example.md",
+    "---\ntitle: # comment\ndescription: # comment\ntags: # labels\n- useful\n---\nBody",
+  );
+  expect(p.title).toBe("example");
+  expect(p.description).toBeNull();
+  expect(p.tags).toEqual(["useful"]);
+  expect(r.errors).toEqual([]);
+});
