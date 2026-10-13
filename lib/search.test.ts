@@ -52,7 +52,9 @@ test("terms are ANDed: every term must match some field", () => {
 test("field weights run title > file name > tags > category/subcategory > description", () => {
   const term = "zqx";
   const title = prompt({path: "prompts/misc/pt.md", title: `has ${term}`});
-  const file = prompt({path: `prompts/misc/${term}.md`});
+  // Explicit non-matching title: the stem match must score at fileName
+  // weight, because a derived title equal to the stem would score as title.
+  const file = prompt({path: `prompts/misc/${term}.md`, title: "unrelated"});
   const tag = prompt({path: "prompts/misc/pg.md", tags: [term]});
   const cat = prompt({path: `prompts/${term}/pc.md`});
   const sub = prompt({path: `prompts/other/${term}/pd.md`});
@@ -160,4 +162,10 @@ test("empty query caps the recent section at 10", () => {
   const recent = lib.slice(-10).map((p) => p.id).reverse();
   expect(rows.slice(0, 10)).toEqual(recent);
   expect(rows.slice(10)).toEqual(["prompts/c/p00.md", "prompts/c/p01.md"]);
+});
+
+test("identical explicit titles score equally even when one equals the stem", () => {
+  const stem = prompt({path: "prompts/c/needle.md", title: "needle"});
+  const other = prompt({path: "prompts/c/other.md", title: "needle"});
+  expect(order([stem, other], "needle")).toEqual([stem.id, other.id]);
 });
