@@ -16,6 +16,8 @@ Item {
     property var binds: []              // [{modmask,key,description,submap}]
     property var repos: []              // [{fullName,id,private}]
     property var colors: ({})
+    property QtObject theme
+    property QtObject tokens
     property var copyText: null         // fn(text) — root's Copier path
     property string chordState: "typing"   // typing | conflict | ready
     property string bindLine: ""

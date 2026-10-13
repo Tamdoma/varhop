@@ -12,6 +12,8 @@ Item {
     property string draftPromptId: ""
     property string query: ""
     property var colors: ({})
+    property QtObject theme
+    property QtObject tokens
     property int selectedIndex: 0
     property real keyTime: 0          // epoch ms of the last keypress affecting the list
     property bool retainSelection: false // rows changed without a query edit
