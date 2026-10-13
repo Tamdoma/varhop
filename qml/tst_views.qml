@@ -874,6 +874,21 @@ TestCase {
         compare(back.count, 1, "Esc on an empty filter keeps its meaning")
     }
 
+    function test_settings_tab_scrolls_focused_control_into_view() {
+        var many = []
+        for (var n = 0; n < 30; n++) many.push({fullName: "owner/repo-" + n, id: 100 + n, private: false})
+        var s = openSettings({height: 420, repos: many})
+        var names = ["syncNowButton", "chordField", "resetUsageButton"]
+        for (var k = 0; k < names.length; k++) {
+            var target = findChild(s, names[k])
+            for (var i = 0; i < 12 && !target.activeFocus; i++) keyClick(Qt.Key_Tab)
+            verify(target.activeFocus, names[k] + " is reachable by Tab")
+            var top = target.mapToItem(s, 0, 0).y
+            verify(top >= 0 && top + target.height <= s.height,
+                   names[k] + " is inside the visible area, top " + top + " height " + target.height)
+        }
+    }
+
     function test_settings_controls_reachable_by_tab_and_enter() {
         var copied = []
         var s = openSettings({libraryMismatch: "reconfirm: switching repos discards the current draft",
