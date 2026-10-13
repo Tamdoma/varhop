@@ -1,5 +1,16 @@
 import {test, expect} from "bun:test";
 import {join} from "node:path";
+import {readdirSync} from "node:fs";
+
+// akrogon run-check scrubs the session env. Rebuild the two values the
+// Wayland client needs; the socket name varies (wayland-1 here), so scan it.
+const waylandEnv = () => {
+  const runtime = process.env.XDG_RUNTIME_DIR ?? `/run/user/${process.getuid()}`;
+  const sock = process.env.WAYLAND_DISPLAY
+    ?? readdirSync(runtime).find((n) => /^wayland-\d+$/.test(n))
+    ?? "wayland-0";
+  return {XDG_RUNTIME_DIR: runtime, WAYLAND_DISPLAY: sock};
+};
 
 // Component checks: the interactive views import no Quickshell module, so
 // qmltestrunner on the real Wayland platform loads them, pastes from the real
@@ -13,6 +24,7 @@ test("view component checks pass under qmltestrunner on wayland", {timeout: 60_0
     ],
     env: {
       ...process.env,
+      ...waylandEnv(),
       QT_QPA_PLATFORM: "wayland",
       QT_IM_MODULE: process.env.QT_IM_MODULE ?? "fcitx",
       QT_FORCE_STDERR_LOGGING: "1",
