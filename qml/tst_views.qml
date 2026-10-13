@@ -229,6 +229,21 @@ TestCase {
         e.destroy()
     }
 
+    function test_editor_empty_mirror_and_unset_count() {
+        var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
+            prompt: prompt("{{X}} repeated {{X}} then {{Y}}", ["X", "Y"])
+        })
+        e.openPrompt()
+        e.setValue("X", "")
+        compare(findChild(e, "mirror0").text, "")
+        verify(hasText(e, "1 unset variable"), "present-empty values are not counted as unset")
+        e.unsetValue("X")
+        compare(findChild(e, "mirror0").text, "{{X}}")
+        verify(hasText(e, "2 unset variables"))
+        e.destroy()
+    }
+
     function test_editor_paste_multiline_and_mirror_click() {
         var e = createTemporaryObject(editorComp, tc, {
             width: 700, height: 500, visible: true,
