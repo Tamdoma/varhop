@@ -216,6 +216,19 @@ TestCase {
         e.destroy()
     }
 
+    function test_editor_zero_variable_calls_copier() {
+        var calls = []
+        var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
+            prompt: prompt("plain body", []),
+            copier: {copy: function(text) { calls.push(text); return true }}
+        })
+        e.openPrompt()
+        tryVerify(function() { return calls.length === 1 }, 1000)
+        compare(calls[0], "plain body")
+        e.destroy()
+    }
+
     function test_editor_paste_multiline_and_mirror_click() {
         var e = createTemporaryObject(editorComp, tc, {
             width: 700, height: 500, visible: true,
