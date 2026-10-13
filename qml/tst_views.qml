@@ -230,6 +230,36 @@ TestCase {
         e.destroy()
     }
 
+    function test_editor_undo_redo_stays_with_the_active_variable() {
+        var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
+            prompt: prompt("{{LANGUAGE}} {{DIFF}} {{LANGUAGE}}", ["LANGUAGE", "DIFF"])
+        })
+        e.openPrompt()
+        var language = findChild(e, "value0")
+        var diff = findChild(e, "value1")
+        language.forceActiveFocus()
+        keyClick(Qt.Key_P)
+        keyClick(Qt.Key_Tab)
+        keyClick(Qt.Key_D)
+        keyClick(Qt.Key_Tab, Qt.ShiftModifier)
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(language.text, "", "undo applies to the focused variable")
+        compare(diff.text, "d", "undo leaves the other variable unchanged")
+        keyClick(Qt.Key_Tab)
+        keyClick(Qt.Key_F)
+        keyClick(Qt.Key_Tab, Qt.ShiftModifier)
+        keyClick(Qt.Key_Y, Qt.ControlModifier)
+        compare(language.text, "p", "editing another variable preserves this variable's redo")
+        compare(diff.text, "df")
+        compare(findChild(e, "mirror0").text, "p")
+        keyClick(Qt.Key_Tab)
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(diff.text, "d", "each variable keeps chronological edits")
+        compare(language.text, "p")
+        e.destroy()
+    }
+
     function test_editor_draft_only_restores_its_own_prompt() {
         var e = createTemporaryObject(editorComp, tc, {
             width: 700, height: 500, visible: true,
