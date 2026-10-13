@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtTest
 import "testing"
+import "../lib/search.mjs" as Sea
 
 // Component checks for the varhop views. The views import no Quickshell module,
 // so qmltestrunner loads them; all shell services (copier, repo list, binds)
@@ -183,6 +184,23 @@ TestCase {
     // whole prompt with values inline. `ranges` lists every value occurrence in
     // display order as {name, start, end}; `valueOf(name)` is undefined while
     // the name is unset. Edits sync through a deferred guard, so value checks wait.
+
+    // The plugin root replaces library.prompts on every import and usage on
+    // every usage write, then ranks again. The live shell segfaulted in
+    // WeakMap.get on a freed key (coredumps of 2026-10-13 13:27 and 14:02).
+    function test_search_rank_survives_replaced_libraries() {
+        for (var r = 0; r < 20; r++) {
+            var prompts = []
+            for (var i = 0; i < 40; i++)
+                prompts.push({id: "r" + r + "/p" + i + ".md", title: "T " + i, body: "b",
+                              search: {title: "t " + i, fileName: "p" + i, category: "c",
+                                       subcategory: "", description: "", tags: [], body: "b"}})
+            var usage = {entries: {}}
+            compare(Sea.rank(prompts, "", usage, Date.now()).length, 40)
+            verify(Sea.rank(prompts, "t " + (r % 9), usage, Date.now()).length > 0)
+            gc()
+        }
+    }
 
     function seedClipboard(text) {
         var t = createTemporaryObject(seedComp, tc, {text: text})
