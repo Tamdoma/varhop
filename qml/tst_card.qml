@@ -299,6 +299,20 @@ TestCase {
         tryCompare(c, "view", "search", 1000, "Enter presses the focused button")
     }
 
+    function test_plain_tab_to_header_then_esc_returns_to_input() {
+        var c = makeCard({})
+        var q = findChild(c.body, "queryField")
+        tryVerify(function() { return q.activeFocus }, 1000)
+        keyClick("x")
+        for (var i = 0; i < 4 && !header(c, "settingsButton").activeFocus; i++) keyClick(Qt.Key_Tab)
+        verify(header(c, "settingsButton").activeFocus, "plain Tab reaches Settings")
+        keyClick(Qt.Key_Escape)
+        verify(q.activeFocus, "Esc returns to the query field")
+        for (var j = 0; j < 4 && !header(c, "settingsButton").activeFocus; j++) keyClick(Qt.Key_Tab)
+        keyClick(Qt.Key_Tab, Qt.ControlModifier)
+        verify(q.activeFocus, "Ctrl+Tab returns to the query field")
+    }
+
     function test_esc_in_body_keeps_its_meaning() {
         var c = makeCard({})
         var hidden = spyComp.createObject(tc, {target: c, signalName: "hideRequested"})
