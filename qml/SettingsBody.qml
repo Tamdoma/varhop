@@ -191,8 +191,7 @@ Item {
                     width: parent.width
                     height: 34
                     focus: true
-                    onVisibleChanged: { console.log("varhop-vis " + visible); if (visible) forceActiveFocus() }
-                    onActiveFocusChanged: console.log("varhop-foc " + activeFocus)
+                    onVisibleChanged: if (visible) forceActiveFocus()
                     Component.onCompleted: forceActiveFocus()
                     wrapMode: TextEdit.NoWrap
                     color: root._fg
@@ -208,7 +207,6 @@ Item {
                     }
                     Keys.priority: Keys.BeforeItem
                     Keys.onPressed: function(event) {
-                        console.log("varhop-fk " + event.key + " t=" + repoField.text)
                         if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
                             && event.modifiers === Qt.NoModifier) {
                             root.repoTyped(repoField.text.trim())

@@ -42,6 +42,7 @@ Item {
     property var rows: []
     property int syncGen: 0
     property int pendingGen: 0
+    property bool stateDirReady: false
     property var pendingSync: null          // {fullName, repoChange, accountId, repoId, staged}
     property var pendingSave: null          // selection object awaiting read-back
     property var pendingMismatch: null      // {actualAccountId, actualRepoId}
@@ -169,18 +170,10 @@ Item {
         bindsProc.running = true
     }
 
-    onManifestChanged: {
-        // Host injects manifest after construction; binaries depend on
-        // manifest.__sourceDir, so wait for it before spawning anything.
-        refreshStatus()
-        refreshRepos()
-        refreshBinds()
-    }
 
-    onViewChanged: console.log("varhop-view " + view)
+
 
     function route() {
-        console.log("varhop-view " + view + " sel=" + (selection ? selection.repo : "none") + " draft=" + (draft ? draft.promptId : "none"))
         if (draft !== null) {
             var p = null
             for (var i = 0; i < library.prompts.length; i++)
@@ -197,7 +190,6 @@ Item {
     function open(payloadJson) {
         opened = true
         route()
-        console.log("varhop-view " + view)
         refreshStatus()
         if (!selection) refreshRepos()
         refreshBinds()
@@ -237,10 +229,8 @@ Item {
         var cmd = [syncBin, "sync", fullName, cachePath, "--generation", String(syncGen)]
         if (opts && opts.expect)
             cmd = cmd.concat(["--expect-account", String(opts.expect.accountId), "--expect-repo", String(opts.expect.repoId)])
-        console.log("varhop-syncstart " + cmd.join(" "))
         syncProc.command = cmd
         syncProc.running = true
-        console.log("varhop-syncrunning " + syncProc.running)
     }
 
     function chooseRepo(fullName, expect) {
@@ -320,9 +310,14 @@ Item {
         watchChanges: true
         printErrors: false
         onLoaded: {
+            var hadSelection = !!root.selection
             root.parseConfig(text())
             if (root.confirmSaved(root.pendingSave)) {
                 root.acceptStaged()
+            } else if (!hadSelection && root.selection) {
+                // First read may race the library load: selection landed after
+                // the bundle was rejected as mismatched. Re-read it now.
+                if (root.library.prompts.length === 0) libraryFile.reload()
             }
         }
         onLoadFailed: root.parseConfig("")
@@ -369,7 +364,6 @@ Item {
     Process {
         id: statusProc
         command: [root.syncBin, "status"]
-        onStarted: console.log("varhop-status spawn")
         stdout: StdioCollector {
             onStreamFinished: {
                 try { root.syncStatus = JSON.parse(text) } catch (e) { root.syncStatus = ({}) }
@@ -398,10 +392,8 @@ Item {
     Process {
         id: reposProc
         command: [root.syncBin, "repos"]
-        onStarted: console.log("varhop-repos spawn")
         stdout: StdioCollector {
             onStreamFinished: {
-                console.log("varhop-reposout " + text.slice(0, 120))
                 try { root.repos = JSON.parse(text).repos || [] } catch (e) { root.repos = [] }
             }
         }
@@ -415,15 +407,13 @@ Item {
         command: [root.syncBin, "repo", repoProc.typed]
         stdout: StdioCollector {
             onStreamFinished: {
-                console.log("varhop-repoout " + text)
                 try {
                     var r = JSON.parse(text)
                     if (r.fullName) root.chooseRepo(r.fullName, {accountId: root.syncStatus ? root.syncStatus.accountId : null, repoId: r.id})
                 } catch (e) { root.lastError = "repo lookup failed" }
             }
         }
-        onStarted: console.log("varhop-repo start " + command.join(" "))
-        onExited: function(code) { console.log("varhop-repo exit " + code); if (code !== 0) root.lastError = "repo lookup failed" }
+        onExited: function(code) { if (code !== 0) root.lastError = "repo lookup failed" }
     }
 
     Process {
@@ -439,7 +429,6 @@ Item {
 
     Process {
         id: syncProc
-        onStarted: console.log("varhop-sync spawn")
         stdout: StdioCollector {
             onStreamFinished: {
                 try { syncProc.lastOut = JSON.parse(text) } catch (e) { syncProc.lastOut = null }
@@ -447,7 +436,6 @@ Item {
         }
         property var lastOut: null
         onExited: function(code, status) {
-            console.log("varhop-syncexit " + code + " out=" + JSON.stringify(lastOut))
             var gen = root.pendingGen
             var out = lastOut
             if (code === 0 && out) {
@@ -491,7 +479,18 @@ Item {
     Process {
         id: mkdirProc
         command: ["mkdir", "-p", root.stateDir]
-        onExited: usageFile.reload()
+        onExited: function(code) {
+            if (code === 0) root.stateDirReady = true
+            usageFile.reload()
+        }
+    }
+
+    Timer {
+        // Same early-spawn workaround as the sync probes.
+        interval: 1500
+        repeat: true
+        running: !root.stateDirReady
+        onTriggered: if (!mkdirProc.running) mkdirProc.running = true
     }
 
     Copier {
@@ -510,7 +509,8 @@ Item {
 
     Component.onCompleted: {
         mkdirProc.running = true
-        refreshStatus()
+        // Probes spawn on first open: spawning this early fails while the
+        // shell is still booting.
     }
 
     onOpenedChanged: if (opened) {
@@ -564,7 +564,6 @@ Item {
                 focus: true
 
                 Keys.onPressed: function(event) {
-                    console.log("varhop-key " + event.key + " mods=" + event.modifiers)
                     var v = root.view === "search" ? searchLoader.item
                         : root.view === "editor" ? editorLoader.item
                         : settingsLoader.item
@@ -601,7 +600,6 @@ Item {
                         item.queryCleared.connect(function() { root.rebuildRows("") })
                         item.hideRequested.connect(root.hide)
                         item.accepted.connect(function(id) {
-                            console.log("varhop-accept " + id + " prompts=" + root.library.prompts.length)
                             for (var i = 0; i < root.library.prompts.length; i++) {
                                 if (root.library.prompts[i].id === id) {
                                     root.prevSearch = {query: item.query, selectedId: id}
