@@ -38,14 +38,19 @@ Item {
     property var usage: Use.resetUsage()
     property var draft: null                // {promptId,values,activeName,cursor,selection}
     property var prevSearch: null           // {query, selectedId} for Ctrl+P return
+    property string lastQuery: ""           // query the current rows were built for
+    property bool retainSelection: false    // rows changed without a query edit
+    property string _lastSelected: ""       // last selected row id, survives view switches
     property var currentPrompt: null
     property var rows: []
     property int syncGen: 0
     property int pendingGen: 0
     property bool stateDirReady: false
-    property var pendingSync: null          // {fullName, repoChange, accountId, repoId, staged}
+    property var pendingSync: null          // {fullName, repoChange, staged, parsed}
     property var pendingSave: null          // selection object awaiting read-back
-    property var pendingMismatch: null      // {actualAccountId, actualRepoId}
+    property var pendingMismatch: null      // {fullName, expect, actual}
+    property var prevSelection: null        // selection before a repoChange save attempt
+    property bool saveTried: false          // a saveSelection write was attempted this sync
     property bool syncing: false
     property real lastKeyAt: 0
     property bool firstFramePending: false
@@ -93,6 +98,40 @@ Item {
             selection = null
         }
         usagePath = selection ? stateDir + "/usage-" + selection.repoId + ".json" : ""
+        rebuildRows(searchLoader.item ? searchLoader.item.query : "")
+    }
+
+    // Parse a bundle and import its prompts without committing it as the
+    // active library. Returns {bundle, out, errs} or null with a message in
+    // libraryMismatch. expectedRepoId is the selection's repoId for the
+    // stable cache and the sync output's repoId for a staged bundle.
+    function parseBundle(text, expectedRepoId) {
+        var b = null
+        try { b = JSON.parse(text) } catch (e) { b = null }
+        if (!b) return null
+        if (String(b.repoId) !== String(expectedRepoId)) return null
+        var out = Imp.importLibrary(b.files || [])
+        var errs = []
+        for (var i = 0; i < (b.errors || []).length; i++) {
+            var be = b.errors[i]
+            errs.push({kind: "bundle", path: be.path || "?", line: null, message: be.message || "?"})
+        }
+        for (var j = 0; j < out.errors.length; j++) {
+            var pe = out.errors[j]
+            errs.push({kind: "prompt", path: pe.path || "?", line: pe.line, message: pe.message || "?"})
+        }
+        return {bundle: b, out: out, errs: errs}
+    }
+
+    function applyParsed(p) {
+        var b = p.bundle
+        library = p.out
+        loadErrors = p.errs
+        bundle = b
+        lastPull = b.fetchedAt ? new Date(b.fetchedAt).toISOString().slice(0, 16).replace("T", " ") : ""
+        if (b.status === "empty-repo") { lastError = "repo has no prompts" }
+        if (b.status === "no-prompts") { lastError = "repo has no prompts/ directory" }
+        rebuildRows(searchLoader.item ? searchLoader.item.query : "")
     }
 
     onUsagePathChanged: usageFile.reload()
@@ -105,26 +144,11 @@ Item {
         if (!selection || String(b.repoId) !== String(selection.repoId)) {
             libraryMismatch = "cached library belongs to a different repo (" +
                 (b.repo || "?") + " id " + b.repoId + "); pick Sync now"
+            if (opened && view !== "settings") view = "settings"
             return null
         }
         libraryMismatch = ""
-        var out = Imp.importLibrary(b.files || [])
-        library = out
-        var errs = []
-        for (var i = 0; i < (b.errors || []).length; i++) {
-            var be = b.errors[i]
-            errs.push({kind: "bundle", path: be.path || "?", line: null, message: be.message || "?"})
-        }
-        for (var j = 0; j < out.errors.length; j++) {
-            var pe = out.errors[j]
-            errs.push({kind: "prompt", path: pe.path || "?", line: pe.line, message: pe.message || "?"})
-        }
-        loadErrors = errs
-        bundle = b
-        lastPull = b.fetchedAt ? new Date(b.fetchedAt).toISOString().slice(0, 16).replace("T", " ") : ""
-        if (b.status === "empty-repo") { lastError = "repo has no prompts" }
-        if (b.status === "no-prompts") { lastError = "repo has no prompts/ directory" }
-        rebuildRows("")
+        applyParsed(parseBundle(text, selection.repoId))
         return b
     }
 
@@ -134,6 +158,9 @@ Item {
     }
 
     function rebuildRows(query) {
+        query = query || ""
+        retainSelection = (query === lastQuery)
+        lastQuery = query
         var ranked = Sea.rank(library.prompts, query, usage, Date.now())
         var out = []
         for (var i = 0; i < ranked.length; i++) {
@@ -178,12 +205,24 @@ Item {
             var p = null
             for (var i = 0; i < library.prompts.length; i++)
                 if (library.prompts[i].id === draft.promptId) { p = library.prompts[i]; break }
-            if (p) { currentPrompt = p; view = "editor"; editorLoader.item.openPrompt(); return }
+            if (p) {
+                currentPrompt = p
+                view = "editor"
+                // The loader activates on view change; the item may not exist yet.
+                Qt.callLater(function() { if (view === "editor" && editorLoader.item) editorLoader.item.openPrompt() })
+                return
+            }
             draft = null
         }
         if (!selection) view = "settings"
         else view = "search"
         cameFrom = ""
+    }
+
+    function backToEditor() {
+        // Returning to the editor after settings needs a fresh openPrompt:
+        // the loader destroyed the item while the view was elsewhere.
+        Qt.callLater(function() { if (view === "editor" && editorLoader.item) editorLoader.item.openPrompt() })
     }
 
     // ---- shell API ------------------------------------------------------------
@@ -198,8 +237,9 @@ Item {
     }
 
     function close() {
-        if (view === "editor" && editorLoader.item && draft === null && currentPrompt) {
-            // Keep an in-progress edit as the draft.
+        // Copy completion is the only hide that must not capture: onSucceeded
+        // clears the draft, and a capture would resurrect it.
+        if (view === "editor" && editorLoader.item && !copySucceeded && currentPrompt) {
             if (currentPrompt.names.length > 0) draft = editorLoader.item.captureDraft()
         }
         opened = false
@@ -225,7 +265,10 @@ Item {
         lastError = ""
         syncGen += 1
         pendingGen = syncGen
-        pendingSync = {fullName: fullName, repoChange: !!(opts && opts.repoChange), staged: ""}
+        pendingSync = {fullName: fullName, repoChange: !!(opts && opts.repoChange), staged: "", parsed: null}
+        // false = there was no selection to return to (first sync).
+        prevSelection = pendingSync.repoChange ? (selection === null ? false : selection) : null
+        saveTried = false
         var cmd = [syncBin, "sync", fullName, cachePath, "--generation", String(syncGen)]
         if (opts && opts.expect)
             cmd = cmd.concat(["--expect-account", String(opts.expect.accountId), "--expect-repo", String(opts.expect.repoId)])
@@ -251,6 +294,7 @@ Item {
             pendingSave = null
             return false
         }
+        saveTried = true
         shell.updateEntryInline("ivan.varhop", {
             repo: entry.repo, login: entry.login,
             accountId: entry.accountId, repoId: entry.repoId
@@ -269,6 +313,21 @@ Item {
         return true
     }
 
+    // Called by stagedFile after the staged bundle parsed and imported.
+    function stagedReady(parsed, entry) {
+        if (!pendingSync || pendingSync.parsed !== null) return
+        pendingSync.parsed = parsed
+        if (!pendingSync.repoChange) { acceptStaged(); return }
+        var out = pendingSync.syncOut || {}
+        var e = entry || {repo: out.repo, login: out.login,
+                          accountId: out.accountId, repoId: out.repoId}
+        if (!saveSelection(e)) { failSync("save failed"); restorePrevSelection(); return }
+        // configFile's onLoaded/onFileChanged drives confirmSaved → acceptStaged;
+        // saveWatchdog completes the failure when no confirming read lands.
+        saveWatchdog.restart()
+        if (confirmSaved(e)) { saveWatchdog.stop(); acceptStaged() }
+    }
+
     function acceptStaged() {
         if (!pendingSync || pendingSync.staged === "") return
         acceptProc.command = [syncBin, "accept", cachePath, String(pendingGen)]
@@ -276,17 +335,16 @@ Item {
     }
 
     function finishSync() {
-        // Accept landed: swap the in-memory library with the staged bundle.
-        if (!pendingSync || pendingSync.staged === "") { syncing = false; return }
-        var stagedPath = pendingSync.staged
+        // Accept landed: swap in the already-imported staged bundle.
+        if (!pendingSync || pendingSync.parsed === null) { syncing = false; return }
+        var parsed = pendingSync.parsed
         var wasRepoChange = pendingSync.repoChange
         pendingSync = null
         syncing = false
         if (wasRepoChange) draft = null   // confirmed switch discards the draft
-        libraryFile.path = stagedPath
-        libraryFile.reload()
+        applyParsed(parsed)
         usagePath = selection ? stateDir + "/usage-" + selection.repoId + ".json" : ""
-        rebuildRows(searchLoader.item ? searchLoader.item.query : "")
+        if (view === "settings" && cameFrom === "") view = "search"
     }
 
     function failSync(msg) {
@@ -294,6 +352,20 @@ Item {
         pendingSync = null
         pendingSave = null
         lastError = msg
+    }
+
+    function restorePrevSelection() {
+        // A repo-change failed after the entry was (maybe) written; put the
+        // previous durable selection back so selection and library agree.
+        if (!saveTried || prevSelection === null) return
+        var prev = prevSelection
+        prevSelection = null
+        saveTried = false
+        if (shell && typeof shell.updateEntryInline === "function")
+            shell.updateEntryInline("ivan.varhop", prev === false ? {}
+                : {repo: prev.repo, login: prev.login, accountId: prev.accountId, repoId: prev.repoId})
+        configFile.reload()
+        usagePath = prev === false ? "" : stateDir + "/usage-" + prev.repoId + ".json"
     }
 
     // ---- usage -----------------------------------------------------------------
@@ -320,8 +392,33 @@ Item {
                 if (root.library.prompts.length === 0) libraryFile.reload()
             }
         }
-        onLoadFailed: root.parseConfig("")
+        onLoadFailed: function(error) {
+            // A missing file means no saved selection yet; other read
+            // failures keep the previous in-memory selection.
+            if (error === FileViewError.FileNotFound) root.parseConfig("")
+        }
         onFileChanged: reload()
+    }
+
+    // Reads the staged bundle varhop-sync produced; imported against the
+    // sync output's repoId so a repo change is accepted before the entry
+    // flips. parseBundle failure completes the sync as an error.
+    FileView {
+        id: stagedFile
+        watchChanges: false
+        printErrors: false
+        onLoaded: {
+            if (!root.pendingSync || root.pendingSync.parsed !== null) return
+            var p = root.parseBundle(text(), root.pendingSync.repoId)
+            if (!p) { root.failSync("staged import failed"); root.restorePrevSelection(); return }
+            root.stagedReady(p, null)
+        }
+        onLoadFailed: function(error) {
+            if (root.pendingSync && root.pendingSync.parsed === null) {
+                root.failSync("staged read failed")
+                root.restorePrevSelection()
+            }
+        }
     }
 
     FileView {
@@ -351,10 +448,20 @@ Item {
         onLoaded: {
             var r = Use.parseUsage(text())
             if (r.state !== undefined) { root.usage = r.state; root.usageError = "" }
+            // A malformed file keeps the in-memory state and only shows the
+            // error; a silent reset would lose per-repo history.
             else root.usageError = "usage file unreadable: " + r.error
             root.rebuildRows(searchLoader.item ? searchLoader.item.query : "")
         }
-        onLoadFailed: { root.usage = Use.resetUsage(); root.rebuildRows("") }
+        onLoadFailed: function(error) {
+            if (error === FileViewError.FileNotFound) {
+                // First run: nothing persisted yet.
+                root.usage = Use.resetUsage()
+                root.rebuildRows("")
+            } else {
+                root.usageError = "usage read failed (" + error + ")"
+            }
+        }
         onSaved: root.usageError = ""
         onSaveFailed: function(error) { root.usageError = "usage write failed (" + error + ")" }
         onFileChanged: reload()
@@ -442,17 +549,16 @@ Item {
                 if (gen !== root.syncGen) { root.syncing = false; return }  // stale
                 if (out.status === "empty-repo" || out.status === "no-prompts") {
                     root.failSync(out.status === "empty-repo" ? "repo is empty" : "repo has no prompts/")
+                    root.restorePrevSelection()
                     return
                 }
+                // Read the staged bundle; its FileView imports it against
+                // the sync output's repoId before anything is published.
                 root.pendingSync.staged = out.staged || ""
-                if (root.pendingSync.repoChange) {
-                    var entry = {repo: out.repo, login: out.login, accountId: out.accountId, repoId: out.repoId}
-                    if (!root.saveSelection(entry)) { root.failSync("save failed"); return }
-                    // configFile's onLoaded/onFileChanged drives confirmSaved → acceptStaged.
-                    if (root.confirmSaved(entry)) root.acceptStaged()
-                } else {
-                    root.acceptStaged()
-                }
+                root.pendingSync.repoId = out.repoId
+                root.pendingSync.syncOut = out
+                stagedFile.path = out.staged
+                stagedFile.reload()
             } else if (code === 5 && out && out.actual) {
                 root.syncing = false
                 root.pendingMismatch = {fullName: root.pendingSync ? root.pendingSync.fullName : "",
@@ -472,7 +578,19 @@ Item {
         stdout: StdioCollector { onStreamFinished: {} }
         onExited: function(code) {
             if (code === 0) root.finishSync()
-            else root.failSync("accept failed (exit " + code + ")")
+            else { root.failSync("accept failed (exit " + code + ")"); root.restorePrevSelection() }
+        }
+    }
+
+    Timer {
+        id: saveWatchdog
+        interval: 3000
+        repeat: false
+        onTriggered: {
+            if (root.pendingSave) {
+                root.failSync("selection save was not confirmed")
+                root.restorePrevSelection()
+            }
         }
     }
 
@@ -493,12 +611,16 @@ Item {
         onTriggered: if (!mkdirProc.running) mkdirProc.running = true
     }
 
+    property bool copySucceeded: false
+
     Copier {
         id: copier
         onSucceeded: {
             if (root.currentPrompt) root.recordUsage(root.currentPrompt.id)
+            root.copySucceeded = true
             root.draft = null
             root.hide()
+            root.copySucceeded = false
         }
         onFailed: function(reason) { root.lastError = reason }
     }
@@ -574,7 +696,12 @@ Item {
                             root.view = root.cameFrom === "" ? "search" : root.cameFrom
                             if (root.cameFrom === "" && !root.selection) root.view = "settings"
                             root.cameFrom = ""
+                            if (root.view === "editor") root.backToEditor()
                         } else {
+                            // Capture editor state before its loader destroys
+                            // the item while settings is active.
+                            if (root.view === "editor" && editorLoader.item && root.draft === null)
+                                root.draft = editorLoader.item.captureDraft()
                             root.cameFrom = root.view
                             root.view = "settings"
                             root.refreshRepos()
@@ -592,6 +719,12 @@ Item {
                         item.rows = Qt.binding(function() { return root.rows })
                         item.draftPromptId = Qt.binding(function() { return root.draft ? root.draft.promptId : "" })
                         item.colors = root.colors
+                        item.setQuery(root.lastQuery)
+                        item.selectionChanged.connect(function(id) { root._lastSelected = id })
+                        if (root._lastSelected !== "") {
+                            item.restoreId = root._lastSelected
+                            item.resolveSelection()
+                        }
                         item.queryEdited.connect(function(q) {
                             root.lastKeyAt = item.keyTime
                             root.firstFramePending = true
@@ -599,10 +732,11 @@ Item {
                         })
                         item.queryCleared.connect(function() { root.rebuildRows("") })
                         item.hideRequested.connect(root.hide)
+                        item.retainSelection = Qt.binding(function() { return root.retainSelection })
                         item.accepted.connect(function(id) {
                             for (var i = 0; i < root.library.prompts.length; i++) {
                                 if (root.library.prompts[i].id === id) {
-                                    root.prevSearch = {query: item.query, selectedId: id}
+                                    root.prevSearch = {query: root.lastQuery, selectedId: id}
                                     root.currentPrompt = root.library.prompts[i]
                                     root.view = "editor"
                                     Qt.callLater(function() { if (editorLoader.item) editorLoader.item.openPrompt() })
@@ -631,14 +765,15 @@ Item {
                         item.hideRequested.connect(root.hide)
                         item.findAnother.connect(function() {
                             root.draft = item.captureDraft()
-                            root.view = "search"
+                            if (searchLoader.item && root.prevSearch) {
+                                // restoreId must land before setQuery: the
+                                // text assignment emits queryEdited and the
+                                // rebuild consumes the one-shot id.
+                                searchLoader.item.restoreId = root.prevSearch.selectedId || ""
+                                searchLoader.item.setQuery(root.prevSearch.query || "")
+                            }
                             if (root.prevSearch) root.rebuildRows(root.prevSearch.query)
-                            Qt.callLater(function() {
-                                if (searchLoader.item) {
-                                    searchLoader.item.query = root.prevSearch ? root.prevSearch.query : ""
-                                    var f = searchLoader.item.children[0]
-                                }
-                            })
+                            root.view = "search"
                         })
                         item.pullRequested.connect(function() {
                             if (root.selection) root.startSync(root.selection.repo, {expect: {accountId: root.selection.accountId, repoId: root.selection.repoId}})
@@ -683,9 +818,14 @@ Item {
                             root.rebuildRows("")
                         })
                         item.backRequested.connect(function() {
-                            if (root.cameFrom !== "") { root.view = root.cameFrom; root.cameFrom = "" }
-                            else if (root.selection || root.draft) root.view = root.draft ? "editor" : "search"
-                            else root.hide()
+                            if (root.cameFrom !== "") {
+                                root.view = root.cameFrom
+                                root.cameFrom = ""
+                                if (root.view === "editor") root.backToEditor()
+                            } else if (root.selection || root.draft) {
+                                root.view = root.draft ? "editor" : "search"
+                                if (root.view === "editor") root.backToEditor()
+                            } else root.hide()
                         })
                         item.resumeRequested.connect(function() { if (root.draft) root.route() })
                         item.confirmReimport.connect(function() {

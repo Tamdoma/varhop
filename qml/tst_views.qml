@@ -196,10 +196,70 @@ TestCase {
         keyClick(Qt.Key_Delete)
         verify(hasText(e, "{{X}}"), "Delete again restores unset {{NAME}}")
         keyClick(Qt.Key_Z, Qt.ControlModifier)
-        compare(v.text, "val", "undo restores the value")
+        compare(v.text, "", "first undo returns to the empty state")
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(v.text, "val", "second undo restores the value")
+        keyClick(Qt.Key_Y, Qt.ControlModifier)
+        compare(v.text, "", "redo returns to the empty state")
         keyClick(Qt.Key_Y, Qt.ControlModifier)
         verify(hasText(e, "{{X}}"), "redo restores the reset")
         e.destroy()
+    }
+
+    function test_editor_undo_is_chronological() {
+        var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
+            prompt: prompt("A {{X}}", ["X"]),
+            draft: null, copier: null, colors: ({})
+        })
+        verify(e)
+        e.openPrompt()
+        var v = findChild(e, "value0")
+        v.forceActiveFocus()
+        keyClick(Qt.Key_Delete)          // empty
+        keyClick(Qt.Key_Delete)          // reset to unset {{X}}
+        v.text = "abc"                    // programmatic write stands in for typing
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(v.text, "", "undo removes the typed text before touching the reset")
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(v.text, "", "next undo returns to the empty state, not empty-again")
+        verify(hasText(e, "{{X}}"), "empty values still mirror as set")
+        e.destroy()
+    }
+
+    function test_editor_draft_only_restores_its_own_prompt() {
+        var e = createTemporaryObject(editorComp, tc, {
+            width: 700, height: 500, visible: true,
+            prompt: prompt("A {{X}}", ["X"]),
+            draft: {promptId: "other/prompt.md", values: {X: "stale"},
+                    activeName: "X", cursor: 0, selection: null},
+            copier: null, colors: ({})
+        })
+        verify(e)
+        e.openPrompt()
+        var v = findChild(e, "value0")
+        compare(v.text, "", "a draft for another prompt must not fill this one")
+        e.destroy()
+    }
+
+    function test_search_refresh_retains_selection() {
+        var s = createTemporaryObject(searchComp, tc, {
+            width: 700, height: 500, visible: true,
+            rows: [
+                {id: "p1", title: "One", detail: "d", fileName: "", draft: false, snippet: ""},
+                {id: "p2", title: "Two", detail: "d", fileName: "", draft: false, snippet: ""}
+            ],
+            draftPromptId: "", colors: ({}), query: ""
+        })
+        verify(s)
+        s.selectedIndex = 1
+        s.retainSelection = true
+        s.rows = s.rows.slice()           // same query, refreshed rows (Ctrl+R)
+        compare(s.rows[s.selectedIndex].id, "p2", "refresh retains the selected id")
+        s.retainSelection = false
+        s.rows = s.rows.slice()           // a query edit resets to the top
+        compare(s.selectedIndex, 0, "query edits reset to the top")
+        s.destroy()
     }
 
     function test_editor_zero_variable_requests_copy() {

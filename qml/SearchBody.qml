@@ -14,6 +14,9 @@ Item {
     property var colors: ({})
     property int selectedIndex: 0
     property real keyTime: 0          // epoch ms of the last keypress affecting the list
+    property bool retainSelection: false // rows changed without a query edit
+    property string restoreId: ""       // one-shot id to select on next rows change
+    property string _lastSelectedId: ""
 
     signal queryEdited(string q)
     signal queryCleared
@@ -21,6 +24,7 @@ Item {
     signal accepted(string id)
     signal resumeDraft
     signal pullRequested
+    signal selectionChanged(string id)
 
     function c(name, fallback) {
         return colors && colors[name] !== undefined ? colors[name] : fallback
@@ -31,7 +35,31 @@ Item {
     readonly property color _selBg: c("selectedBackground", "#22282c")
     readonly property color _selFg: c("selectedText", "#ffffff")
 
-    onRowsChanged: selectedIndex = 0
+    onRowsChanged: resolveSelection()
+
+    function resolveSelection() {
+        // Query edits reset to the top row; refreshes that keep the query
+        // (Ctrl+R, usage writes) retain the selection by id.
+        var want = restoreId !== "" ? restoreId
+            : (retainSelection ? _lastSelectedId : "")
+        restoreId = ""
+        selectedIndex = 0
+        if (want !== "")
+            for (var i = 0; i < rows.length; i++)
+                if (rows[i].id === want) { selectedIndex = i; break }
+    }
+
+    onSelectedIndexChanged: {
+        if (selectedIndex >= 0 && selectedIndex < rows.length) {
+            _lastSelectedId = rows[selectedIndex].id
+            selectionChanged(_lastSelectedId)
+        }
+    }
+
+    function setQuery(q) {
+        query = q
+        queryField.text = Qt.binding(function() { return root.query })
+    }
 
     function move(delta) {
         if (rows.length === 0) return

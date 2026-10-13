@@ -37,55 +37,61 @@ Item {
     property var _names: []
     property var _nameStops: ({})       // name -> stop index in unique order
     property var _values: ({})          // name -> string
-    property var _resets: []            // [{name, had}] semantic empty/reset actions
-    property var _redos: []             // undone semantic actions
+    property var _hist: []              // unified per-editor undo timeline:
+                                        //   {kind:"typed", name, had, got} a field edit
+                                        //   {kind:"empty", name, had} Delete emptied a value
+                                        //   {kind:"reset", name, had} Delete on empty restored {{NAME}}
+                                        // had === undefined means the value was unset.
+    property var _redos: []             // undone entries, same shapes
+    property bool _applying: false      // suppress history marks on programmatic writes
 
-    function pushAction(name, kind, had) {
-        // "empty" then "reset" on the same name is one semantic undo step:
-        // undo restores the value, redo returns to raw {{NAME}}.
-        if (kind === "reset" && _resets.length > 0
-            && _resets[_resets.length - 1].name === name
-            && _resets[_resets.length - 1].kind === "empty") {
-            var prev = _resets.pop()
-            _resets.push({name: name, kind: "reset", had: prev.had})
-            _redos = []
-            return
-        }
-        _resets.push({name: name, kind: kind, had: had})
+    function pushAction(name, kind, had, got) {
+        _hist.push({kind: kind, name: name, had: had, got: got})
         _redos = []
     }
-    function semanticUndo(name, field) {
-        for (var i = _resets.length - 1; i >= 0; i--) {
-            if (_resets[i].name !== name) continue
-            var a = _resets.splice(i, 1)[0]
-            _redos.push(a)
-            if (a.kind === "reset") {
-                // reset (raw) -> empty -> value: restore the value
-                field.text = a.had
-                setValue(name, a.had)
-            } else {
-                field.text = a.had
-                setValue(name, a.had)
-            }
-            return true
+    function undoTop() {
+        if (_hist.length === 0) return false
+        var a = _hist.pop()
+        _redos.push(a)
+        _applying = true
+        if (a.kind === "typed") {
+            var f = fieldFor(a.name)
+            if (f) f.text = a.had === undefined ? "" : a.had
+            if (a.had === undefined) unsetValue(a.name)
+            else setValue(a.name, a.had)
+        } else if (a.kind === "empty") {
+            var g = fieldFor(a.name)
+            if (g) g.text = a.had
+            setValue(a.name, a.had)
+        } else {
+            // undo a reset: return to the present-but-empty value state
+            var h = fieldFor(a.name)
+            if (h) h.text = ""
+            setValue(a.name, "")
         }
-        return false
+        _applying = false
+        return true
     }
-    function semanticRedo(name, field) {
-        for (var i = _redos.length - 1; i >= 0; i--) {
-            if (_redos[i].name !== name) continue
-            var a = _redos.splice(i, 1)[0]
-            _resets.push(a)
-            if (a.kind === "reset") {
-                field.text = ""
-                unsetValue(name)
-            } else {
-                field.text = ""
-                setValue(name, "")
-            }
-            return true
+    function redoTop() {
+        if (_redos.length === 0) return false
+        var a = _redos.pop()
+        _hist.push(a)
+        _applying = true
+        if (a.kind === "typed") {
+            var f = fieldFor(a.name)
+            if (f) f.text = a.got
+            setValue(a.name, a.got)
+        } else if (a.kind === "empty") {
+            var g = fieldFor(a.name)
+            if (g) g.text = ""
+            setValue(a.name, "")
+        } else {
+            var h = fieldFor(a.name)
+            if (h) h.text = ""
+            unsetValue(a.name)
         }
-        return false
+        _applying = false
+        return true
     }
 
     function openPrompt() {
@@ -98,9 +104,11 @@ Item {
             idx++
         }
         _nameStops = stops
-        _resets = []
+        _hist = []
         _redos = []
         lastError = ""
+        // A draft belongs to one prompt id; any other prompt starts clean.
+        var draft = (root.draft && root.prompt && root.draft.promptId === root.prompt.id) ? root.draft : null
         var v = ({})
         if (draft && draft.values)
             for (var k in draft.values) v[k] = draft.values[k]
@@ -293,22 +301,19 @@ Item {
                                     root.pushAction(seg.name, "reset", "")
                                     root.unsetValue(seg.name)
                                 } else {
-                                    root.pushAction(seg.name, "empty", text)
+                                    var had = text
+                                    root._applying = true
                                     text = ""
+                                    root._applying = false
+                                    root.pushAction(seg.name, "empty", had)
                                     root.setValue(seg.name, "")
                                 }
                                 event.accepted = true
                             } else if (event.key === Qt.Key_Z && mods === Qt.ControlModifier) {
-                                if (!root.semanticUndo(seg.name, field)) {
-                                    undo()
-                                    root.setValue(seg.name, text)
-                                }
+                                root.undoTop()
                                 event.accepted = true
                             } else if (event.key === Qt.Key_Y && mods === Qt.ControlModifier) {
-                                if (!root.semanticRedo(seg.name, field)) {
-                                    redo()
-                                    root.setValue(seg.name, text)
-                                }
+                                root.redoTop()
                                 event.accepted = true
                             } else {
                                 FieldKeys.handle(event, field, {copySelection: false, inertCtrlR: false})
@@ -316,8 +321,13 @@ Item {
                             }
                         }
                         onTextChanged: {
-                            if (isStop && activeFocus && root._values[seg.name] !== text)
+                            if (isStop && activeFocus && root._values[seg.name] !== text) {
+                                // Typed edits and Delete-key actions share one
+                                // timeline so undo is strictly chronological.
+                                if (!root._applying)
+                                    root.pushAction(seg.name, "typed", root._values[seg.name], text)
                                 root.setValue(seg.name, text)
+                            }
                         }
                         onActiveFocusChanged: if (activeFocus && seg.kind === "token") root.activeName = seg.name
                     }
