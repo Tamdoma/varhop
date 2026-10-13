@@ -53,10 +53,11 @@ Item {
             text += shown
         }
         _shown = text
-        ranges = out
+        // Text before ranges: highlight geometry must never read stale text.
         _applying = true
         if (editorText.text !== text) editorText.text = text
         _applying = false
+        ranges = out
         valuesVersion++
     }
 
@@ -321,13 +322,15 @@ Item {
                         return name === root.activeName ? "active"
                             : v === undefined ? "unset" : v === "" ? "empty" : "filled"
                     }
+                    // A raw keystroke reflows the text before the guard pass
+                    // replaces ranges, so positions clamp to the current length.
                     readonly property rect a: {
                         editorText.contentWidth; editorText.contentHeight
-                        return editorText.positionToRectangle(modelData.start)
+                        return editorText.positionToRectangle(Math.min(modelData.start, editorText.length))
                     }
                     readonly property rect b: {
                         editorText.contentWidth; editorText.contentHeight
-                        return editorText.positionToRectangle(modelData.end)
+                        return editorText.positionToRectangle(Math.min(modelData.end, editorText.length))
                     }
                     z: -1
                     x: a.x + 1

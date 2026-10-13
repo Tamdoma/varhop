@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import qs.Commons
 import qs.Commons as Commons
 import qs.Ui
 import "qml"
@@ -10,8 +11,8 @@ import "lib/search.mjs" as Sea
 import "lib/usage.mjs" as Use
 import "lib/fold.mjs" as Fold
 
-// ivan.varhop overlay plugin root. Owns the OverlayWindow, view routing, the
-// draft, shell.json selection I/O, varhop-sync process flow and the usage
+// ivan.varhop overlay plugin root. Owns the OverlayWindow and its Omarchy
+// surface, shell.json selection I/O, varhop-sync process flow and the usage
 // state file. Views stay Quickshell-free so qmltestrunner can load them.
 Item {
     id: root
@@ -22,27 +23,21 @@ Item {
 
     // ---- state ------------------------------------------------------------
     property bool opened: false
-    property string view: "search"          // settings | search | editor
-    property string cameFrom: ""            // view settings was opened from ("" = first run)
     property var selection: null            // {repo,login,accountId,repoId} or null
     property var library: ({prompts: [], errors: []})
     property var bundle: null               // last accepted library.json
     property var loadErrors: []
     property var syncStatus: ({})
     property var repos: []
+    property string reposState: "loading"   // loading | failed | ready, from the list process
     property var binds: []
     property string lastError: ""
     property string lastPull: ""
     property string libraryMismatch: ""
     property string usageError: ""
     property var usage: Use.resetUsage()
-    property var draft: null                // {promptId,values,activeName,cursor,selection}
-    property var prevSearch: null           // {query, selectedId} for Ctrl+P return
-    property string lastQuery: ""           // query the current rows were built for
-    property string _lastKey: ""            // folded term key of lastQuery
+    property string _lastKey: ""            // folded term key of the last rebuilt query
     property bool retainSelection: false    // rows changed without a query edit
-    property string _lastSelected: ""       // last selected row id, survives view switches
-    property var currentPrompt: null
     property var rows: []
     property int syncGen: 0
     property int pendingGen: 0
@@ -57,18 +52,6 @@ Item {
     property bool syncing: false
     property real lastKeyAt: 0
     property bool firstFramePending: false
-
-    // ---- colors -------------------------------------------------------------
-    function col(name) { return Commons.Color[name] }
-    property var colors: ({
-        foreground: Commons.Color.foreground,
-        muted: Commons.Color.muted,
-        accent: Commons.Color.accent,
-        urgent: Commons.Color.urgent,
-        selectedBackground: Commons.Color.menu.selectedBackground,
-        selectedText: Commons.Color.menu.selectedText,
-        border: Commons.Color.menu.border
-    })
 
     // ---- paths ---------------------------------------------------------------
     readonly property string homePath: Quickshell.env("HOME")
@@ -101,7 +84,7 @@ Item {
             selection = null
         }
         usagePath = selection ? stateDir + "/usage-" + selection.repoId + ".json" : ""
-        rebuildRows(searchLoader.item ? searchLoader.item.query : lastQuery)
+        rebuildRows(card.lastQuery)
     }
 
     // Parse a bundle and import its prompts without committing it as the
@@ -134,7 +117,7 @@ Item {
         lastPull = b.fetchedAt ? new Date(b.fetchedAt).toISOString().slice(0, 16).replace("T", " ") : ""
         if (b.status === "empty-repo") { lastError = "repo has no prompts" }
         if (b.status === "no-prompts") { lastError = "repo has no prompts/ directory" }
-        rebuildRows(searchLoader.item ? searchLoader.item.query : lastQuery)
+        rebuildRows(card.lastQuery)
     }
 
     onUsagePathChanged: usageFile.reload()
@@ -147,7 +130,7 @@ Item {
         if (!selection || String(b.repoId) !== String(selection.repoId)) {
             libraryMismatch = "cached library belongs to a different repo (" +
                 (b.repo || "?") + " id " + b.repoId + "); pick Sync now"
-            if (opened && view !== "settings") view = "settings"
+            if (opened && card.view !== "settings") card.view = "settings"
             return null
         }
         libraryMismatch = ""
@@ -195,10 +178,10 @@ Item {
         var key = Sea.fold(query).split(/\s+/).filter(function(t) { return t !== "" }).join(" ")
         retainSelection = (key === _lastKey)
         _lastKey = key
-        lastQuery = query
+        card.lastQuery = query
         if (_rowCacheMap === null) _rowCacheMap = new Map()
         var c = _rowCacheMap.get(key)
-        if (c && c.prompts === library.prompts && c.usage === usage && c.draft === draft) {
+        if (c && c.prompts === library.prompts && c.usage === usage && c.draft === card.draft) {
             // Refresh recency inside the LRU.
             _rowCacheMap.delete(key)
             _rowCacheMap.set(key, c)
@@ -219,14 +202,14 @@ Item {
             out.push({
                 id: p.id, title: p.title, detail: parts.detail,
                 fileName: parts.fileName,
-                draft: draft !== null && draft.promptId === p.id,
+                draft: card.draft !== null && card.draft.promptId === p.id,
                 snippet: ranked[i].snippet || ""
             })
         }
         rows = out
         if (_rowCacheMap.size > _rowCacheCap)
             _rowCacheMap.delete(_rowCacheMap.keys().next().value)
-        _rowCacheMap.set(key, {prompts: library.prompts, usage: usage, draft: draft, rows: out})
+        _rowCacheMap.set(key, {prompts: library.prompts, usage: usage, draft: card.draft, rows: out})
     }
 
     function refreshStatus() {
@@ -247,50 +230,24 @@ Item {
 
 
 
-    function route() {
-        if (draft !== null) {
-            var p = null
-            for (var i = 0; i < library.prompts.length; i++)
-                if (library.prompts[i].id === draft.promptId) { p = library.prompts[i]; break }
-            if (p) {
-                currentPrompt = p
-                view = "editor"
-                // The loader activates on view change; the item may not exist yet.
-                Qt.callLater(function() { if (view === "editor" && editorLoader.item) editorLoader.item.openPrompt() })
-                return
-            }
-            draft = null
-        }
-        // A cache rejected while closed leaves libraryMismatch set; summon
-        // must land on the settings recovery path, not stale search rows.
-        if (!selection || libraryMismatch !== "") view = "settings"
-        else view = "search"
-        cameFrom = ""
-    }
-
-    function backToEditor() {
-        // Returning to the editor after settings needs a fresh openPrompt:
-        // the loader destroyed the item while the view was elsewhere.
-        Qt.callLater(function() { if (view === "editor" && editorLoader.item) editorLoader.item.openPrompt() })
+    function pull() {
+        if (selection) startSync(selection.repo, {expect: {accountId: selection.accountId, repoId: selection.repoId}})
     }
 
     // ---- shell API ------------------------------------------------------------
     function open(payloadJson) {
         opened = true
-        route()
+        card.route()
         refreshStatus()
         if (!selection) refreshRepos()
         refreshBinds()
-        rebuildRows(searchLoader.item ? searchLoader.item.query : lastQuery)
-        if (view === "editor" && editorLoader.item) editorLoader.item.openPrompt()
+        rebuildRows(card.lastQuery)
     }
 
     function close() {
         // Copy completion is the only hide that must not capture: onSucceeded
         // clears the draft, and a capture would resurrect it.
-        if (view === "editor" && editorLoader.item && !copySucceeded && currentPrompt) {
-            if (currentPrompt.names.length > 0) draft = editorLoader.item.captureDraft()
-        }
+        if (!copySucceeded) card.captureForHide()
         opened = false
     }
 
@@ -327,10 +284,10 @@ Item {
 
     function chooseRepo(fullName, expect) {
         // Choosing a different repo warns when a draft exists.
-        if (draft !== null && selection && fullName !== selection.repo) {
+        if (card.draft !== null && selection && fullName !== selection.repo) {
             libraryMismatch = "reconfirm: switching repos discards the current draft"
             pendingMismatch = {fullName: fullName, expect: expect || null}
-            view = "settings"
+            card.view = "settings"
             return
         }
         startSync(fullName, {expect: expect || null, repoChange: true})
@@ -390,10 +347,10 @@ Item {
         var wasRepoChange = pendingSync.repoChange
         pendingSync = null
         syncing = false
-        if (wasRepoChange) draft = null   // confirmed switch discards the draft
+        if (wasRepoChange) card.draft = null   // confirmed switch discards the draft
         applyParsed(parsed)
         usagePath = selection ? stateDir + "/usage-" + selection.repoId + ".json" : ""
-        if (view === "settings" && cameFrom === "") view = "search"
+        if (card.view === "settings" && card.cameFrom === "") card.view = "search"
     }
 
     function failSync(msg) {
@@ -540,7 +497,7 @@ Item {
             // A malformed file keeps the in-memory state and only shows the
             // error; a silent reset would lose per-repo history.
             else { root.usageError = "usage file unreadable: " + r.error; root.usageLoadFailed = true }
-            root.rebuildRows(searchLoader.item ? searchLoader.item.query : lastQuery)
+            root.rebuildRows(card.lastQuery)
         }
         onLoadFailed: function(error) {
             if (error === FileViewError.FileNotFound) {
@@ -592,10 +549,15 @@ Item {
         command: [root.syncBin, "repos"]
         stdout: StdioCollector {
             onStreamFinished: {
-                try { root.repos = JSON.parse(text).repos || [] } catch (e) { root.repos = [] }
+                try { root.repos = JSON.parse(text).repos || [] } catch (e) { root.repos = []; root.reposState = "failed" }
             }
         }
-        onExited: function(code) { if (code !== 0) root.repos = [] }
+        // Retries keep a failed state until a list arrives.
+        onRunningChanged: if (running && root.reposState !== "failed") root.reposState = "loading"
+        onExited: function(code) {
+            if (code !== 0) { root.repos = []; root.reposState = "failed" }
+            else if (root.repos.length > 0 || root.reposState !== "failed") root.reposState = "ready"
+        }
     }
 
 
@@ -607,7 +569,8 @@ Item {
             onStreamFinished: {
                 try {
                     var r = JSON.parse(text)
-                    if (r.fullName) root.chooseRepo(r.fullName, {accountId: root.syncStatus ? root.syncStatus.accountId : null, repoId: r.id})
+                    // The picker applies the result only while its field still holds the typed name.
+                    if (r.fullName && card.view === "settings") card.body.lookupDone(repoProc.typed, r.fullName, r.id)
                 } catch (e) { root.lastError = "repo lookup failed" }
             }
         }
@@ -655,7 +618,7 @@ Item {
                 root.pendingMismatch = {fullName: root.pendingSync ? root.pendingSync.fullName : "",
                                         actual: out.actual}
                 root.libraryMismatch = "reconfirm: account " + out.actual.accountId + " / repo " + out.actual.repoId + " differs from the saved selection"
-                root.view = "settings"
+                card.view = "settings"
                 root.pendingSync = null
             } else {
                 var msg = out && out.message ? out.message : ("sync failed (exit " + code + ")")
@@ -714,9 +677,9 @@ Item {
     Copier {
         id: copier
         onSucceeded: {
-            if (root.currentPrompt) root.recordUsage(root.currentPrompt.id)
+            if (card.currentPrompt) root.recordUsage(card.currentPrompt.id)
             root.copySucceeded = true
-            root.draft = null
+            card.draft = null
             root.hide()
             root.copySucceeded = false
         }
@@ -766,182 +729,83 @@ Item {
             onClicked: root.hide()
         }
 
-        Rectangle {
-            id: card
-            width: Math.min(560, panel.width - 40)
-            height: Math.min(480, panel.height - 40)
+        BorderSurface {
+            id: surface
+            width: Math.min(Style.space(560), panel.width - Style.gapsOut * 2)
+            height: Math.min(Style.space(480), panel.height - Style.gapsOut * 2)
             anchors.centerIn: parent
-            radius: 6
+            radius: Style.cornerRadius
             color: Commons.Color.menu.background
-            border.color: Commons.Color.menu.border
-            border.width: 1
+            borderSpec: Border.surfaceSpec("menu", "border", Commons.Color.menu.border, Math.max(1, Style.space(2)))
+            padding: Style.spacing.panelPadding
 
             MouseArea { anchors.fill: parent; onClicked: {} }
 
-            Item {
+            Card {
+                id: card
                 anchors.fill: parent
-                anchors.margins: 16
+                anchors.leftMargin: surface.contentLeftInset
+                anchors.rightMargin: surface.contentRightInset
+                anchors.topMargin: surface.contentTopInset
+                anchors.bottomMargin: surface.contentBottomInset
                 focus: true
+                theme: Commons.Color
+                tokens: Style
+                library: root.library
+                rows: root.rows
+                retainSelection: root.retainSelection
+                selection: root.selection
+                libraryMismatch: root.libraryMismatch
+                syncStatus: root.syncStatus
+                repos: root.repos
+                reposState: root.reposState
+                binds: root.binds
+                lastPull: root.lastPull
+                lastError: root.lastError + (root.usageError ? " · " + root.usageError : "")
+                loadErrors: root.loadErrors
+                copier: copier
+                copyText: function(t) { bindCopier.copy(t) }
 
-                Keys.onPressed: function(event) {
-                    var v = root.view === "search" ? searchLoader.item
-                        : root.view === "editor" ? editorLoader.item
-                        : settingsLoader.item
-                    if (v && v.handleKey) v.handleKey(event)
-                    if (event.accepted) return
-                    if (event.key === Qt.Key_Comma && event.modifiers === Qt.ControlModifier) {
-                        if (root.view === "settings") {
-                            root.view = root.cameFrom === "" ? "search" : root.cameFrom
-                            if (root.cameFrom === "" && !root.selection) root.view = "settings"
-                            root.cameFrom = ""
-                            if (root.view === "editor") root.backToEditor()
-                        } else {
-                            // Capture editor state before its loader destroys
-                            // the item while settings is active. A resumed
-                            // draft is re-captured too: edits made since the
-                            // resume must survive the transition.
-                            if (root.view === "editor" && editorLoader.item && root.currentPrompt)
-                                root.draft = editorLoader.item.captureDraft()
-                            root.cameFrom = root.view
-                            root.view = "settings"
-                            root.refreshRepos()
-                        }
-                        event.accepted = true
+                onHideRequested: root.hide()
+                onQueryEdited: function(q) {
+                    if (card.view === "search") {
+                        root.lastKeyAt = card.body.keyTime
+                        root.firstFramePending = true
                     }
+                    root.rebuildRows(q)
                 }
-
-                Loader {
-                    id: searchLoader
-                    anchors.fill: parent
-                    active: root.view === "search"
-                    source: "qml/SearchBody.qml"
-                    onLoaded: {
-                        item.rows = Qt.binding(function() { return root.rows })
-                        item.draftPromptId = Qt.binding(function() { return root.draft ? root.draft.promptId : "" })
-                        item.colors = root.colors
-                        item.setQuery(root.lastQuery)
-                        item.selectionChanged.connect(function(id) { root._lastSelected = id })
-                        if (root._lastSelected !== "") {
-                            item.restoreId = root._lastSelected
-                            item.resolveSelection()
-                        }
-                        item.queryEdited.connect(function(q) {
-                            root.lastKeyAt = item.keyTime
-                            root.firstFramePending = true
-                            root.rebuildRows(q)
-                        })
-                        item.queryCleared.connect(function() { root.rebuildRows("") })
-                        item.hideRequested.connect(root.hide)
-                        item.retainSelection = Qt.binding(function() { return root.retainSelection })
-                        item.accepted.connect(function(id) {
-                            for (var i = 0; i < root.library.prompts.length; i++) {
-                                if (root.library.prompts[i].id === id) {
-                                    root.prevSearch = {query: root.lastQuery, selectedId: id}
-                                    root.currentPrompt = root.library.prompts[i]
-                                    root.view = "editor"
-                                    Qt.callLater(function() { if (editorLoader.item) editorLoader.item.openPrompt() })
-                                    break
-                                }
-                            }
-                        })
-                        item.resumeDraft.connect(function() { root.route() })
-                        item.pullRequested.connect(function() {
-                            if (root.selection) root.startSync(root.selection.repo, {expect: {accountId: root.selection.accountId, repoId: root.selection.repoId}})
-                        })
-                    }
+                onPullRequested: root.pull()
+                onSyncNow: root.pull()
+                onSettingsOpened: root.refreshRepos()
+                onRepoChosen: function(fullName) {
+                    var r = null
+                    for (var i = 0; i < root.repos.length; i++)
+                        if (root.repos[i].fullName === fullName) { r = root.repos[i]; break }
+                    root.chooseRepo(fullName, r ? {accountId: root.syncStatus.accountId, repoId: r.id} : null)
                 }
-
-                Loader {
-                    id: editorLoader
-                    anchors.fill: parent
-                    active: root.view === "editor"
-                    source: "qml/EditorBody.qml"
-                    onLoaded: {
-                        item.prompt = Qt.binding(function() { return root.currentPrompt })
-                        item.draft = Qt.binding(function() { return root.draft })
-                        item.copier = copier
-                        item.colors = root.colors
-                        item.copyRequested.connect(function() {})
-                        item.hideRequested.connect(root.hide)
-                        item.findAnother.connect(function() {
-                            root.draft = item.captureDraft()
-                            if (searchLoader.item && root.prevSearch) {
-                                // restoreId must land before setQuery: the
-                                // text assignment emits queryEdited and the
-                                // rebuild consumes the one-shot id.
-                                searchLoader.item.restoreId = root.prevSearch.selectedId || ""
-                                searchLoader.item.setQuery(root.prevSearch.query || "")
-                            }
-                            if (root.prevSearch) root.rebuildRows(root.prevSearch.query)
-                            root.view = "search"
-                        })
-                        item.pullRequested.connect(function() {
-                            if (root.selection) root.startSync(root.selection.repo, {expect: {accountId: root.selection.accountId, repoId: root.selection.repoId}})
-                        })
-                    }
+                onRepoTyped: function(fullName) {
+                    if (!root.repoRe.test(fullName)) { root.lastError = "invalid owner/repo"; return }
+                    repoProc.typed = fullName
+                    repoProc.running = true
                 }
-
-                Loader {
-                    id: settingsLoader
-                    anchors.fill: parent
-                    active: root.view === "settings"
-                    source: "qml/SettingsBody.qml"
-                    onLoaded: {
-                        item.syncStatus = Qt.binding(function() { return root.syncStatus })
-                        item.lastPull = Qt.binding(function() { return root.lastPull })
-                        item.lastError = Qt.binding(function() { return root.lastError + (root.usageError ? " · " + root.usageError : "") })
-                        item.loadErrors = Qt.binding(function() { return root.loadErrors })
-                        item.selection = Qt.binding(function() { return root.selection })
-                        item.binds = Qt.binding(function() { return root.binds })
-                        item.repos = Qt.binding(function() { return root.repos })
-                        item.libraryMismatch = Qt.binding(function() { return root.libraryMismatch })
-                        item.colors = root.colors
-                        item.copyText = function(t) { bindCopier.copy(t) }
-                        item.repoChosen.connect(function(fullName) {
-                            var r = null
-                            for (var i = 0; i < root.repos.length; i++)
-                                if (root.repos[i].fullName === fullName) { r = root.repos[i]; break }
-                            root.chooseRepo(fullName, r ? {accountId: root.syncStatus.accountId, repoId: r.id} : null)
-                        })
-                        item.repoTyped.connect(function(name) {
-                            if (!root.repoRe.test(name)) { root.lastError = "invalid owner/repo"; return }
-                            repoProc.typed = name
-                            repoProc.running = true
-                        })
-                        item.syncNow.connect(function() {
-                            if (root.selection) root.startSync(root.selection.repo, {expect: {accountId: root.selection.accountId, repoId: root.selection.repoId}})
-                        })
-                        item.resetUsage.connect(function() {
-                            // The recovery for a failed load: the operator's
-                            // explicit reset may overwrite the bad file.
-                            root.usage = Use.resetUsage()
-                            root.usageLoadFailed = false
-                            usageFile.blockWrites = false
-                            usageFile.setText(JSON.stringify(root.usage))
-                            root.rebuildRows("")
-                        })
-                        item.backRequested.connect(function() {
-                            if (root.cameFrom !== "") {
-                                root.view = root.cameFrom
-                                root.cameFrom = ""
-                                if (root.view === "editor") root.backToEditor()
-                            } else if (root.selection || root.draft) {
-                                root.view = root.draft ? "editor" : "search"
-                                if (root.view === "editor") root.backToEditor()
-                            } else root.hide()
-                        })
-                        item.resumeRequested.connect(function() { if (root.draft) root.route() })
-                        item.confirmReimport.connect(function() {
-                            if (root.pendingMismatch && root.pendingMismatch.fullName) {
-                                var m = root.pendingMismatch
-                                root.pendingMismatch = null
-                                root.libraryMismatch = ""
-                                root.startSync(m.fullName, {expect: m.expect || null, repoChange: true})
-                            }
-                        })
-                        item.pullRequested.connect(function() {
-                            if (root.selection) root.startSync(root.selection.repo, {expect: {accountId: root.selection.accountId, repoId: root.selection.repoId}})
-                        })
+                onLookupAccepted: function(fullName, repoId) {
+                    root.chooseRepo(fullName, {accountId: root.syncStatus ? root.syncStatus.accountId : null, repoId: repoId})
+                }
+                onResetUsage: {
+                    // The recovery for a failed load: the operator's
+                    // explicit reset may overwrite the bad file.
+                    root.usage = Use.resetUsage()
+                    root.usageLoadFailed = false
+                    usageFile.blockWrites = false
+                    usageFile.setText(JSON.stringify(root.usage))
+                    root.rebuildRows("")
+                }
+                onConfirmReimport: {
+                    if (root.pendingMismatch && root.pendingMismatch.fullName) {
+                        var m = root.pendingMismatch
+                        root.pendingMismatch = null
+                        root.libraryMismatch = ""
+                        root.startSync(m.fullName, {expect: m.expect || null, repoChange: true})
                     }
                 }
             }

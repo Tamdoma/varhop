@@ -132,7 +132,9 @@ Item {
             // The public query mirrors the field so root-side rebuilds
             // (import, config reload, usage) start from the actual typed
             // text, not a stale default.
-            onTextChanged: { root.query = text; root.queryEdited(text) }
+            // A query edit resets to the top row even when the rebuilt rows
+            // are the same cached array and no rows change fires.
+            onTextChanged: { root.selectedIndex = 0; root.query = text; root.queryEdited(text) }
         }
 
         // Pinned resume-draft row.

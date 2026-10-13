@@ -47,6 +47,9 @@ type `owner/repo` and Enter. The selection lives in
 
 ## Keys
 
+The header shows Back (`Ctrl+P` in the editor, `Ctrl+,` in settings, Close
+when settings has nowhere to return) and Settings (`Ctrl+,`).
+
 | Key | Action |
 |---|---|
 | Type | filter prompts |
@@ -54,6 +57,7 @@ type `owner/repo` and Enter. The selection lives in
 | Enter | open prompt in editor |
 | Tab / Shift+Tab | next / previous `{{NAME}}` (wraps) |
 | Delete on a value | empty it; again restores `{{NAME}}` |
+| Ctrl+Z / Ctrl+Y (editor) | undo / redo edits to the active value |
 | Ctrl+C / Ctrl+Shift+C (editor) | copy rebuilt prompt, end draft, hide |
 | Ctrl+C / Ctrl+Shift+C (fields) | copy the field's text selection |
 | Ctrl+V / Ctrl+Shift+V | paste |
@@ -61,7 +65,9 @@ type `owner/repo` and Enter. The selection lives in
 | Ctrl+Shift+P | resume draft (search, settings) |
 | Ctrl+R | pull the library (inert inside picker fields) |
 | Ctrl+, | toggle settings; Esc returns to the view it came from |
-| Esc | clear query → hide; in editor/settings, back or hide |
+| Ctrl+Tab | move focus between the view and the header buttons (Back, Settings) |
+| Tab / Enter / Space (header) | move between header buttons / press one |
+| Esc | clear query → hide; in the repo picker, clear the filter first; in editor/settings, back or hide; on a header button, return to the view |
 
 ## Removal
 
