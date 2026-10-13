@@ -52,6 +52,8 @@ Item {
     property var pendingMismatch: null      // {fullName, expect, actual}
     property var prevSelection: null        // selection before a repoChange save attempt
     property bool saveTried: false          // a saveSelection write was attempted this sync
+    property var rollbackCheck: null        // previous selection awaiting rollback read-back
+    property bool rollbackFailed: false     // read-back did not confirm the restore
     property bool syncing: false
     property real lastKeyAt: 0
     property bool firstFramePending: false
@@ -99,7 +101,7 @@ Item {
             selection = null
         }
         usagePath = selection ? stateDir + "/usage-" + selection.repoId + ".json" : ""
-        rebuildRows(searchLoader.item ? searchLoader.item.query : "")
+        rebuildRows(searchLoader.item ? searchLoader.item.query : lastQuery)
     }
 
     // Parse a bundle and import its prompts without committing it as the
@@ -132,7 +134,7 @@ Item {
         lastPull = b.fetchedAt ? new Date(b.fetchedAt).toISOString().slice(0, 16).replace("T", " ") : ""
         if (b.status === "empty-repo") { lastError = "repo has no prompts" }
         if (b.status === "no-prompts") { lastError = "repo has no prompts/ directory" }
-        rebuildRows(searchLoader.item ? searchLoader.item.query : "")
+        rebuildRows(searchLoader.item ? searchLoader.item.query : lastQuery)
     }
 
     onUsagePathChanged: usageFile.reload()
@@ -259,7 +261,9 @@ Item {
             }
             draft = null
         }
-        if (!selection) view = "settings"
+        // A cache rejected while closed leaves libraryMismatch set; summon
+        // must land on the settings recovery path, not stale search rows.
+        if (!selection || libraryMismatch !== "") view = "settings"
         else view = "search"
         cameFrom = ""
     }
@@ -277,7 +281,7 @@ Item {
         refreshStatus()
         if (!selection) refreshRepos()
         refreshBinds()
-        rebuildRows(searchLoader.item ? searchLoader.item.query : "")
+        rebuildRows(searchLoader.item ? searchLoader.item.query : lastQuery)
         if (view === "editor" && editorLoader.item) editorLoader.item.openPrompt()
     }
 
@@ -406,15 +410,51 @@ Item {
         var prev = prevSelection
         prevSelection = null
         saveTried = false
+        rollbackFailed = false
         if (shell && typeof shell.updateEntryInline === "function")
             shell.updateEntryInline("ivan.varhop", prev === false ? {}
                 : {repo: prev.repo, login: prev.login, accountId: prev.accountId, repoId: prev.repoId})
+        rollbackCheck = prev === false ? "none" : prev
         configFile.reload()
+        rollbackWatchdog.restart()
         usagePath = prev === false ? "" : stateDir + "/usage-" + prev.repoId + ".json"
     }
 
+    // Called from configFile.onLoaded after the rollback write: a selection
+    // equal to the previous entry means the durable state was restored.
+    function confirmRollback() {
+        if (rollbackCheck === null) return true
+        var want = rollbackCheck
+        var got = selection
+        var ok = (want === "none" && (!got || !got.repo)) ||
+            (want !== "none" && got && got.repo === want.repo &&
+             String(got.accountId) === String(want.accountId) &&
+             String(got.repoId) === String(want.repoId))
+        if (ok) {
+            rollbackCheck = null
+            rollbackWatchdog.stop()
+            return true
+        }
+        return false
+    }
+
+    function noteRollbackFailed() {
+        rollbackFailed = true
+        rollbackCheck = null
+        // The earlier sync error still stands; append the worse outcome.
+        lastError = lastError ? lastError + "; could not restore the previous selection"
+                              : "could not restore the previous selection"
+    }
+
     // ---- usage -----------------------------------------------------------------
+    property bool usageLoadFailed: false  // malformed/unreadable: writes gated
+
     function recordUsage(promptId) {
+        if (usageLoadFailed) {
+            // Never overwrite a history file we could not parse; the surfaced
+            // error stays and the settings Reset action is the recovery.
+            return
+        }
         usage = Use.recordCopy(usage, promptId, Date.now())
         usageFile.blockWrites = false
         usageFile.setText(JSON.stringify(usage))
@@ -429,6 +469,10 @@ Item {
         onLoaded: {
             var hadSelection = !!root.selection
             root.parseConfig(text())
+            // A rollback read is confirmed only when the restored selection
+            // equals the previous entry; a pre-write snapshot is not a
+            // failure, the watchdog decides after the file settles.
+            if (root.rollbackCheck !== null) root.confirmRollback()
             if (root.confirmSaved(root.pendingSave)) {
                 root.acceptStaged()
             } else if (!hadSelection && root.selection) {
@@ -492,22 +536,24 @@ Item {
         printErrors: false
         onLoaded: {
             var r = Use.parseUsage(text())
-            if (r.state !== undefined) { root.usage = r.state; root.usageError = "" }
+            if (r.state !== undefined) { root.usage = r.state; root.usageError = ""; root.usageLoadFailed = false }
             // A malformed file keeps the in-memory state and only shows the
             // error; a silent reset would lose per-repo history.
-            else root.usageError = "usage file unreadable: " + r.error
-            root.rebuildRows(searchLoader.item ? searchLoader.item.query : "")
+            else { root.usageError = "usage file unreadable: " + r.error; root.usageLoadFailed = true }
+            root.rebuildRows(searchLoader.item ? searchLoader.item.query : lastQuery)
         }
         onLoadFailed: function(error) {
             if (error === FileViewError.FileNotFound) {
                 // First run: nothing persisted yet.
                 root.usage = Use.resetUsage()
+                root.usageLoadFailed = false
                 root.rebuildRows("")
             } else {
                 root.usageError = "usage read failed (" + error + ")"
+                root.usageLoadFailed = true
             }
         }
-        onSaved: root.usageError = ""
+        onSaved: { if (!root.usageLoadFailed) root.usageError = "" }
         onSaveFailed: function(error) { root.usageError = "usage write failed (" + error + ")" }
         onFileChanged: reload()
     }
@@ -639,6 +685,13 @@ Item {
         }
     }
 
+    Timer {
+        id: rollbackWatchdog
+        interval: 3000
+        repeat: false
+        onTriggered: { if (root.rollbackCheck !== null) root.noteRollbackFailed() }
+    }
+
     Process {
         id: mkdirProc
         command: ["mkdir", "-p", root.stateDir]
@@ -744,8 +797,10 @@ Item {
                             if (root.view === "editor") root.backToEditor()
                         } else {
                             // Capture editor state before its loader destroys
-                            // the item while settings is active.
-                            if (root.view === "editor" && editorLoader.item && root.draft === null)
+                            // the item while settings is active. A resumed
+                            // draft is re-captured too: edits made since the
+                            // resume must survive the transition.
+                            if (root.view === "editor" && editorLoader.item && root.currentPrompt)
                                 root.draft = editorLoader.item.captureDraft()
                             root.cameFrom = root.view
                             root.view = "settings"
@@ -857,7 +912,10 @@ Item {
                             if (root.selection) root.startSync(root.selection.repo, {expect: {accountId: root.selection.accountId, repoId: root.selection.repoId}})
                         })
                         item.resetUsage.connect(function() {
+                            // The recovery for a failed load: the operator's
+                            // explicit reset may overwrite the bad file.
                             root.usage = Use.resetUsage()
+                            root.usageLoadFailed = false
                             usageFile.blockWrites = false
                             usageFile.setText(JSON.stringify(root.usage))
                             root.rebuildRows("")

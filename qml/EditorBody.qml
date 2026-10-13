@@ -117,6 +117,16 @@ Item {
         if (draft && draft.values)
             for (var k in draft.values) v[k] = draft.values[k]
         _values = v
+        // The draft owns its per-name undo history so a hide/resume keeps
+        // edits undoable; anything missing stays a fresh stack.
+        if (draft && draft.histories)
+            for (var hn in draft.histories) {
+                if (_hist[hn] !== undefined) _hist[hn] = draft.histories[hn]
+            }
+        if (draft && draft.redos)
+            for (var rn in draft.redos) {
+                if (_redos[rn] !== undefined) _redos[rn] = draft.redos[rn]
+            }
         activeName = draft && draft.activeName ? draft.activeName
             : (_names.length > 0 ? _names[0] : "")
         valuesVersion++
@@ -180,7 +190,9 @@ Item {
             values: JSON.parse(JSON.stringify(_values)),
             activeName: activeName,
             cursor: f ? f.cursorPosition : 0,
-            selection: f && f.selectedText !== "" ? [f.selectionStart, f.selectionEnd] : null
+            selection: f && f.selectedText !== "" ? [f.selectionStart, f.selectionEnd] : null,
+            histories: JSON.parse(JSON.stringify(_hist)),
+            redos: JSON.parse(JSON.stringify(_redos))
         }
     }
 

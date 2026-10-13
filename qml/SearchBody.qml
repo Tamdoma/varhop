@@ -122,7 +122,10 @@ Item {
                 FieldKeys.handle(event, queryField, {copySelection: true, inertCtrlR: false})
                 if (!event.accepted) root.handleKey(event)
             }
-            onTextChanged: root.queryEdited(text)
+            // The public query mirrors the field so root-side rebuilds
+            // (import, config reload, usage) start from the actual typed
+            // text, not a stale default.
+            onTextChanged: { root.query = text; root.queryEdited(text) }
         }
 
         // Pinned resume-draft row.
