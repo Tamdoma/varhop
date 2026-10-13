@@ -109,7 +109,7 @@ Item {
             : (_names.length > 0 ? _names[0] : "")
         valuesVersion++
         if (_names.length === 0) {
-            Qt.callLater(function() { root.copyRequested() })
+            Qt.callLater(function() { root.requestCopy() })
             return
         }
         Qt.callLater(function() {
