@@ -42,12 +42,12 @@ Item {
 
     // Chord vocabulary: MOD+MOD+KEY, modifiers SUPER/SHIFT/CTRL/ALT/META,
     // key one A-Z letter or a named key. No free text ever leaves the field.
-    readonly property var _modBits: ({"SHIFT": 1, "CAPS": 2, "CTRL": 4, "ALT": 8, "META": 128, "SUPER": 64})
+    readonly property var _modBits: ({"SHIFT": 1, "CTRL": 4, "ALT": 8, "META": 128, "SUPER": 64})
     readonly property var _keyNames: ["TAB","ESC","ESCAPE","RETURN","ENTER","SPACE","BACKSPACE","DELETE","HOME","END","PAGEUP","PAGEDOWN","UP","DOWN","LEFT","RIGHT"]
 
     function parseChord(text) {
         if (text === "") return {state: "typing"}
-        var parts = text.split("+")
+        var parts = text.split("+").map(function(part) { return part.trim() })
         if (parts.length < 2) return {state: "typing"}
         var key = parts.pop()
         if (!/^[A-Z0-9]$/.test(key) && _keyNames.indexOf(key) === -1)
@@ -300,15 +300,16 @@ Item {
                     font.bold: true
                     text: "Hotkey"
                 }
-                TextArea {
+                TextField {
                     id: chordField
                     objectName: "chordField"
                     width: parent.width
                     height: 34
-                    wrapMode: TextEdit.NoWrap
                     color: root._fg
                     font.pixelSize: 13
-                    textFormat: TextEdit.PlainText
+                    validator: RegularExpressionValidator {
+                        regularExpression: /\s*(?:(?:SUPER|SHIFT|CTRL|ALT|META)\s*\+\s*)+(?:[A-Z0-9]|TAB|ESC|ESCAPE|RETURN|ENTER|SPACE|BACKSPACE|DELETE|HOME|END|PAGEUP|PAGEDOWN|UP|DOWN|LEFT|RIGHT)\s*/
+                    }
                     placeholderText: "SUPER + ALT + P"
                     placeholderTextColor: root._muted
                     onTextChanged: root.updateChord(text)
