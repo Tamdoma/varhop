@@ -73,7 +73,7 @@ Item {
             text: root.query
             focus: true
             onVisibleChanged: if (visible) forceActiveFocus()
-            Component.onCompleted: if (visible) forceActiveFocus()
+            Component.onCompleted: forceActiveFocus()
             wrapMode: TextEdit.NoWrap
             color: root._fg
             selectionColor: root._selBg
