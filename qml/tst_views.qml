@@ -392,6 +392,18 @@ TestCase {
         s.destroy()
     }
 
+    function test_chord_suggested_syntax_and_character_rejection() {
+        var s = createTemporaryObject(settingsComp, tc, {width: 700, height: 500, visible: true})
+        var field = findChild(s, "chordField")
+        field.text = "SUPER + ALT + P"
+        field.forceActiveFocus()
+        field.cursorPosition = field.text.length
+        keyClick(Qt.Key_At)
+        compare(field.text, "SUPER + ALT + P", "characters outside the vocabulary are refused")
+        compare(s.chordState, "ready", "the displayed spaced syntax is accepted")
+        s.destroy()
+    }
+
     function test_settings_field_paste_copy_chords() {
         var s = createTemporaryObject(settingsComp, tc, {
             width: 700, height: 500, visible: true,
