@@ -20,6 +20,7 @@ QtObject {
         busy = true
         proc.sawExited = false
         proc.pendingText = text
+        proc.stdinEnabled = true
         proc.running = true
         watchdog.restart()
         return true
