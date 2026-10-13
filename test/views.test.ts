@@ -5,12 +5,13 @@ import {waylandEnv, withClipboardRestored} from "./clipboard";
 // Component checks: the interactive views import no Quickshell module, so
 // qmltestrunner on the real Wayland platform loads them, pastes from the real
 // clipboard and synthesizes clicks (proofs-overlay.md row 16).
-test("view component checks pass under qmltestrunner on wayland", {timeout: 60_000}, () => withClipboardRestored(() => {
+for (const file of ["tst_views.qml", "tst_card.qml"])
+test(`${file} component checks pass under qmltestrunner on wayland`, {timeout: 60_000}, () => withClipboardRestored(() => {
   const res = Bun.spawnSync({
     cmd: [
       "/usr/lib/qt6/bin/qmltestrunner",
       "-input",
-      join(import.meta.dir, "..", "qml", "tst_views.qml"),
+      join(import.meta.dir, "..", "qml", file),
     ],
     env: {
       ...process.env,

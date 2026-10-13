@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtTest
+import "testing"
 
 // Component checks for the varhop views. The views import no Quickshell module,
 // so qmltestrunner loads them; all shell services (copier, repo list, binds)
@@ -43,9 +44,15 @@ TestCase {
         return {id: "prompts/dev/x.md", title: "X prompt", body: body, names: names}
     }
 
-    Component { id: searchComp; SearchBody {} }
-    Component { id: editorComp; EditorBody {} }
-    Component { id: settingsComp; SettingsBody {} }
+    // Views receive the live theme and token objects; these stand-ins have the
+    // same shape as Commons.Color and Style.
+    property FakeTheme fakeTheme: FakeTheme {}
+    property FakeTokens fakeTokens: FakeTokens {}
+
+    Component { id: searchComp; SearchBody { theme: tc.fakeTheme; tokens: tc.fakeTokens } }
+    Component { id: editorComp; EditorBody { theme: tc.fakeTheme; tokens: tc.fakeTokens } }
+    Component { id: settingsComp; SettingsBody { theme: tc.fakeTheme; tokens: tc.fakeTokens } }
+    Component { id: seedComp; TextEdit {} }
     Component { id: spyComp; SignalSpy {} }
     Component { id: failingCopierComponent
         QtObject {
@@ -65,7 +72,7 @@ TestCase {
                 {id: "p3", title: "Drafty", detail: "ops / d — draft row", fileName: "drafty.md", draft: true, snippet: ""}
             ],
             draftPromptId: "p3",
-            colors: ({}), query: ""
+            query: ""
         })
         verify(s)
         // ListView creates delegates asynchronously.
@@ -83,7 +90,7 @@ TestCase {
             width: 700, height: 500, visible: true,
             rows: [{id: "p1", title: "One", detail: "c — d", fileName: "one.md", draft: false, snippet: ""}],
             draftPromptId: "p1",
-            colors: ({}), query: ""
+            query: ""
         })
         verify(s)
         var spyResume = spyComp.createObject(tc, {target: s, signalName: "resumeDraft"})
@@ -106,7 +113,7 @@ TestCase {
     function test_search_esc_clear_then_hide() {
         var s = createTemporaryObject(searchComp, tc, {
             width: 700, height: 500, visible: true,
-            rows: [], draftPromptId: "", colors: ({}), query: ""
+            rows: [], draftPromptId: "", query: ""
         })
         verify(s)
         var spyClear = spyComp.createObject(tc, {target: s, signalName: "queryCleared"})
@@ -129,7 +136,7 @@ TestCase {
         // rebuilding an empty list after every refresh.
         var s = createTemporaryObject(searchComp, tc, {
             width: 700, height: 500, visible: true,
-            rows: [], draftPromptId: "", colors: ({}), query: ""
+            rows: [], draftPromptId: "", query: ""
         })
         verify(s)
         var field = findChild(s, "queryField")
@@ -145,7 +152,7 @@ TestCase {
     function test_search_field_paste_copy_chords() {
         var s = createTemporaryObject(searchComp, tc, {
             width: 700, height: 500, visible: true,
-            rows: [], draftPromptId: "", colors: ({}), query: ""
+            rows: [], draftPromptId: "", query: ""
         })
         verify(s)
         var field = findChild(s, "queryField")
@@ -172,158 +179,293 @@ TestCase {
     }
 
     // ------- EditorBody -------
+    // The editor is one PlainText TextArea (objectName editorText) showing the
+    // whole prompt with values inline. `ranges` lists every value occurrence in
+    // display order as {name, start, end}; `valueOf(name)` is undefined while
+    // the name is unset. Edits sync through a deferred guard, so value checks wait.
 
-    function test_editor_tab_wrap_and_mirror() {
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("A {{X}} mid {{Y}} end {{X}}", ["X", "Y"]),
-            draft: null, copier: null, colors: ({})
-        })
-        verify(e)
-        e.openPrompt()
-        var v1 = findChild(e, "value0")
-        var v2 = findChild(e, "value1")
-        verify(v1 && v2, "one stop per unique name")
-        v1.forceActiveFocus()
-        keyClick(Qt.Key_Tab)
-        verify(v2.activeFocus, "Tab to next unique name")
-        keyClick(Qt.Key_Tab)
-        verify(v1.activeFocus, "Tab wraps to first")
-        keyClick(Qt.Key_Tab, Qt.ShiftModifier)
-        verify(v2.activeFocus, "Shift+Tab wraps back")
-        keyClick(Qt.Key_Tab)
-        v1.forceActiveFocus()
-        keyClick(Qt.Key_H)
-        keyClick(Qt.Key_I)
-        compare(v1.text, "hi")
-        var mir = findChild(e, "mirror0")
-        verify(mir, "second {{X}} occurrence is a mirror")
-        compare(String(mir.text), "hi", "typed value mirrors to every occurrence")
-        e.destroy()
+    function seedClipboard(text) {
+        var t = createTemporaryObject(seedComp, tc, {text: text})
+        t.selectAll()
+        t.copy()
+        t.destroy()
     }
 
-    function test_editor_delete_reset_and_undo() {
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("A {{X}}", ["X"]),
-            draft: null, copier: null, colors: ({})
-        })
+    function openEditor(body, names, props) {
+        var init = {width: 700, height: 500, visible: true, prompt: prompt(body, names), draft: null, copier: null}
+        for (var k in props) init[k] = props[k]
+        var e = createTemporaryObject(editorComp, tc, init)
         verify(e)
         e.openPrompt()
-        var v = findChild(e, "value0")
-        v.forceActiveFocus()
-        v.text = "val"
+        var f = findChild(e, "editorText")
+        verify(f, "the editor is one text box")
+        tryVerify(function() { return f.activeFocus }, 1000, "the text box takes focus on open")
+        return e
+    }
+
+    function textBox(e) { return findChild(e, "editorText") }
+
+    function occurrence(e, name, n) {
+        var seen = 0
+        for (var i = 0; i < e.ranges.length; i++) {
+            if (e.ranges[i].name !== name) continue
+            if (seen === n) return e.ranges[i]
+            seen++
+        }
+        fail("no occurrence " + n + " of " + name)
+    }
+
+    function typeText(s) {
+        for (var i = 0; i < s.length; i++) keyClick(s[i])
+    }
+
+    function waitValue(e, name, value) {
+        tryVerify(function() { return e.valueOf(name) === value }, 1000,
+                  name + " should be " + JSON.stringify(value) + ", is " + JSON.stringify(e.valueOf(name)))
+    }
+
+    function test_editor_one_plain_text_box_with_inline_values() {
+        var e = openEditor("A {{X}} mid {{Y}} end {{X}}", ["X", "Y"])
+        var f = textBox(e)
+        compare(f.textFormat, TextEdit.PlainText)
+        compare(f.text, "A {{X}} mid {{Y}} end {{X}}", "the whole prompt shows, unset values as {{NAME}}")
+        var editors = allChildren(e).filter(function(it) { return it.cursorPosition !== undefined })
+        compare(editors.length, 1, "one text box, no per-value fields")
+        compare(e.activeName, "X")
+        compare(f.selectedText, "{{X}}", "the active unset value is wholly selected")
+        compare(f.selectionStart, 2)
+        typeText("hi")
+        waitValue(e, "X", "hi")
+        compare(f.text, "A hi mid {{Y}} end hi", "mirrors of a value update together")
+        compare(e.valueOf("Y"), undefined)
+    }
+
+    function test_editor_tab_walks_unique_names_with_wrap() {
+        var e = openEditor("A {{X}} mid {{Y}} end {{X}}", ["X", "Y"])
+        var f = textBox(e)
+        keyClick(Qt.Key_Tab)
+        compare(e.activeName, "Y")
+        compare(f.selectedText, "{{Y}}")
+        keyClick(Qt.Key_Tab)
+        compare(e.activeName, "X", "Tab wraps to the first name")
+        keyClick(Qt.Key_Tab, Qt.ShiftModifier)
+        compare(e.activeName, "Y", "Shift+Tab wraps back")
+        compare(f.text, "A {{X}} mid {{Y}} end {{X}}", "Tab inserts nothing")
+    }
+
+    function test_editor_prose_never_changes() {
+        var e = openEditor("ab {{X}} cd", ["X"])
+        var f = textBox(e)
+        keyClick("v")
+        waitValue(e, "X", "v")
+        compare(f.text, "ab v cd")
+        var r = occurrence(e, "X", 0)
+        compare(r.start, 3)
+        compare(r.end, 4)
+        f.cursorPosition = r.start
+        keyClick(Qt.Key_Backspace)
+        wait(50)
+        compare(f.text, "ab v cd", "Backspace at the value's start edge is rejected")
+        keyClick(Qt.Key_Home, Qt.ControlModifier)
+        keyClick("q")
+        wait(50)
+        compare(f.text, "ab v cd", "typing in prose is rejected")
+        f.select(1, 4)
+        keyClick("q")
+        wait(50)
+        compare(f.text, "ab v cd", "typing over a selection across a boundary is rejected")
+        seedClipboard("PP")
+        f.select(1, 4)
+        keyClick(Qt.Key_V, Qt.ControlModifier)
+        wait(50)
+        compare(f.text, "ab v cd", "paste across a boundary is rejected")
+        f.select(1, 4)
+        keyClick(Qt.Key_X, Qt.ControlModifier)
+        wait(50)
+        compare(f.text, "ab v cd", "cut across a boundary is rejected")
+        f.insert(0, "MID")   // the route a middle-click paste onto prose takes
+        tryCompare(f, "text", "ab v cd", 1000, "an insertion into prose is reverted")
+        compare(f.canUndo, false, "native text undo is unreachable")
+        r = occurrence(e, "X", 0)
+        f.select(r.start, r.end)
+        keyClick(Qt.Key_V, Qt.ControlModifier)
+        waitValue(e, "X", "PP")
+        compare(f.text, "ab PP cd", "the rejected cut left the clipboard unchanged")
+    }
+
+    function test_editor_click_edits_that_occurrence_in_place() {
+        var e = openEditor("A {{X}} mid {{Y}} end {{X}}", ["X", "Y"])
+        var f = textBox(e)
+        keyClick(Qt.Key_Tab)
+        compare(e.activeName, "Y")
+        var r = occurrence(e, "X", 1)
+        var rect = f.positionToRectangle(r.start + 2)
+        mouseClick(f, rect.x + 1, rect.y + rect.height / 2)
+        tryCompare(e, "activeName", "X")
+        r = occurrence(e, "X", 1)
+        compare(f.selectionStart, r.start, "the clicked occurrence is the one selected")
+        compare(f.selectedText, "{{X}}")
+        keyClick("q")
+        waitValue(e, "X", "q")
+        compare(f.text, "A q mid {{Y}} end q")
+        r = occurrence(e, "X", 1)
+        compare(f.cursorPosition, r.end, "editing continues in the clicked occurrence")
+        keyClick(Qt.Key_Tab)
+        compare(e.activeName, "Y", "Tab order stays by unique name")
+    }
+
+    function test_editor_per_name_undo_and_redo_across_tab() {
+        var e = openEditor("{{L}} {{D}} {{L}}", ["L", "D"])
+        var f = textBox(e)
+        keyClick("p")
+        waitValue(e, "L", "p")
+        keyClick(Qt.Key_Tab)
+        keyClick("d")
+        waitValue(e, "D", "d")
+        keyClick(Qt.Key_Tab, Qt.ShiftModifier)
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        waitValue(e, "L", undefined)
+        compare(e.valueOf("D"), "d", "undo leaves the other name unchanged")
+        compare(f.text, "{{L}} d {{L}}")
+        keyClick(Qt.Key_Tab)
+        keyClick("f")
+        waitValue(e, "D", "df")
+        keyClick(Qt.Key_Tab, Qt.ShiftModifier)
+        keyClick(Qt.Key_Y, Qt.ControlModifier)
+        waitValue(e, "L", "p")
+        compare(e.valueOf("D"), "df", "editing another name keeps this name's redo")
+        compare(f.text, "p df p")
+        keyClick(Qt.Key_Tab)
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        waitValue(e, "D", "d")
+        compare(e.valueOf("L"), "p", "each name keeps its own chronological history")
+    }
+
+    function test_editor_delete_empties_then_unsets_with_undo() {
+        var e = openEditor("A {{X}}", ["X"])
+        var f = textBox(e)
+        keyClick(Qt.Key_Backspace)
+        wait(50)
+        compare(e.valueOf("X"), undefined, "Backspace on an unset value keeps it unset")
+        compare(f.text, "A {{X}}")
         keyClick(Qt.Key_Delete)
-        compare(v.text, "", "Delete on a value empties it")
+        wait(50)
+        compare(e.valueOf("X"), undefined, "Delete on an unset value keeps it unset")
+        typeText("val")
+        waitValue(e, "X", "val")
         keyClick(Qt.Key_Delete)
-        verify(hasText(e, "{{X}}"), "Delete again restores unset {{NAME}}")
+        waitValue(e, "X", "")
+        compare(f.text, "A ", "Delete empties the value")
+        keyClick(Qt.Key_Delete)
+        waitValue(e, "X", undefined)
+        compare(f.text, "A {{X}}", "Delete on an empty value unsets it")
         keyClick(Qt.Key_Z, Qt.ControlModifier)
-        compare(v.text, "", "first undo returns to the empty state")
+        waitValue(e, "X", "")
         keyClick(Qt.Key_Z, Qt.ControlModifier)
-        compare(v.text, "val", "second undo restores the value")
+        waitValue(e, "X", "val")
         keyClick(Qt.Key_Y, Qt.ControlModifier)
-        compare(v.text, "", "redo returns to the empty state")
+        waitValue(e, "X", "")
         keyClick(Qt.Key_Y, Qt.ControlModifier)
-        verify(hasText(e, "{{X}}"), "redo restores the reset")
-        e.destroy()
+        waitValue(e, "X", undefined)
+        compare(f.text, "A {{X}}", "redo restores the reset")
     }
 
-    function test_editor_undo_is_chronological() {
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("A {{X}}", ["X"]),
-            draft: null, copier: null, colors: ({})
-        })
-        verify(e)
-        e.openPrompt()
-        var v = findChild(e, "value0")
-        v.forceActiveFocus()
-        keyClick(Qt.Key_Delete)          // empty
-        keyClick(Qt.Key_Delete)          // reset to unset {{X}}
-        v.text = "abc"                    // programmatic write stands in for typing
+    function test_editor_delete_on_unset_adds_no_history() {
+        var e = openEditor("A {{X}}", ["X"])
+        keyClick(Qt.Key_Delete)
+        keyClick(Qt.Key_Delete)
+        typeText("ab")
+        waitValue(e, "X", "ab")
         keyClick(Qt.Key_Z, Qt.ControlModifier)
-        compare(v.text, "", "undo removes the typed text before touching the reset")
         keyClick(Qt.Key_Z, Qt.ControlModifier)
-        compare(v.text, "", "next undo returns to the empty state, not empty-again")
-        verify(hasText(e, "{{X}}"), "empty values still mirror as set")
-        e.destroy()
-    }
-
-    function test_editor_undo_redo_stays_with_the_active_variable() {
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("{{LANGUAGE}} {{DIFF}} {{LANGUAGE}}", ["LANGUAGE", "DIFF"])
-        })
-        e.openPrompt()
-        var language = findChild(e, "value0")
-        var diff = findChild(e, "value1")
-        language.forceActiveFocus()
-        keyClick(Qt.Key_P)
-        keyClick(Qt.Key_Tab)
-        keyClick(Qt.Key_D)
-        keyClick(Qt.Key_Tab, Qt.ShiftModifier)
+        waitValue(e, "X", undefined)
         keyClick(Qt.Key_Z, Qt.ControlModifier)
-        compare(language.text, "", "undo applies to the focused variable")
-        compare(diff.text, "d", "undo leaves the other variable unchanged")
-        keyClick(Qt.Key_Tab)
-        keyClick(Qt.Key_F)
-        keyClick(Qt.Key_Tab, Qt.ShiftModifier)
+        wait(50)
+        compare(e.valueOf("X"), undefined, "the Delete presses on the unset value left no history")
         keyClick(Qt.Key_Y, Qt.ControlModifier)
-        compare(language.text, "p", "editing another variable preserves this variable's redo")
-        compare(diff.text, "df")
-        compare(findChild(e, "mirror0").text, "p")
-        keyClick(Qt.Key_Tab)
-        keyClick(Qt.Key_Z, Qt.ControlModifier)
-        compare(diff.text, "d", "each variable keeps chronological edits")
-        compare(language.text, "p")
-        e.destroy()
+        waitValue(e, "X", "a")
     }
 
-    function test_editor_draft_carries_undo_history() {
-        // A resumed draft must keep its per-variable undo history: capture,
-        // destroy, reopen, and Ctrl+Z still steps the earlier edit.
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("A {{X}}", ["X"]),
-            draft: null, copier: null, colors: ({})
-        })
-        verify(e)
-        e.openPrompt()
-        var v = findChild(e, "value0")
-        v.forceActiveFocus()
-        keyClick(Qt.Key_A); keyClick(Qt.Key_B)
-        compare(v.text, "ab")
+    function test_editor_value_highlights() {
+        var e = openEditor("{{A}}{{B}} x {{C}} {{D}}", ["A", "B", "C", "D"])
+        keyClick(Qt.Key_Tab)
+        keyClick("b")
+        waitValue(e, "B", "b")
+        keyClick(Qt.Key_Tab)
+        keyClick("c")
+        waitValue(e, "C", "c")
+        keyClick(Qt.Key_Backspace)
+        waitValue(e, "C", "")
+        keyClick(Qt.Key_Tab)
+        keyClick(Qt.Key_Tab)
+        compare(e.activeName, "A")
+        wait(50)
+        var kinds = {}
+        var boxes = {}
+        var lights = allChildren(e).filter(function(it) { return it.objectName === "valueHighlight" && it.visible })
+        for (var i = 0; i < lights.length; i++) {
+            var h = lights[i]
+            kinds[h.name] = h.kind
+            var x = h.mapToItem(e, 0, 0).x
+            var b = boxes[h.name] || {left: x, right: x + h.width}
+            boxes[h.name] = {left: Math.min(b.left, x), right: Math.max(b.right, x + h.width)}
+        }
+        compare(kinds.A, "active", "the active value has the strongest highlight")
+        compare(kinds.B, "filled", "a filled value keeps a faint highlight")
+        compare(kinds.C, "empty", "an empty value keeps a marker")
+        compare(kinds.D, "unset", "an unset value shows muted")
+        verify(boxes.A.right < boxes.B.left, "adjacent values do not visually merge")
+    }
+
+    function test_editor_copy_rebuilds_from_segments() {
+        var calls = []
+        var e = openEditor("Say {{X}} to {{Y}} and \\{{X}}", ["X", "Y"],
+                           {copier: {copy: function(t) { calls.push(t); return true }}})
+        var f = textBox(e)
+        compare(f.text, "Say {{X}} to {{Y}} and {{X}}", "an escaped token shows as prose")
+        compare(e.ranges.length, 2, "the escaped token is not a value")
+        typeText("hi")
+        waitValue(e, "X", "hi")
+        keyClick(Qt.Key_C, Qt.ControlModifier)
+        compare(calls.length, 1)
+        compare(calls[0], "Say hi to {{Y}} and {{X}}", "copy rebuilds from segments and values")
+    }
+
+    function test_editor_draft_restores_values_history_and_exact_selection() {
+        var e = openEditor("A {{X}} b", ["X"])
+        var f = textBox(e)
+        typeText("abcdef")
+        waitValue(e, "X", "abcdef")
+        keyClick(Qt.Key_Left, Qt.ShiftModifier)
+        keyClick(Qt.Key_Left, Qt.ShiftModifier)
+        compare(f.selectedText, "ef")
+        compare(f.cursorPosition, 6)
         var d = e.captureDraft()
-        verify(d.histories !== undefined && d.histories.X !== undefined,
-               "captured draft carries undo history for X")
-        var e2 = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: e.prompt, draft: d, copier: null, colors: ({})
-        })
-        verify(e2)
-        e2.openPrompt()
-        var v2 = findChild(e2, "value0")
-        compare(v2.text, "ab", "resumed draft restores the value")
-        v2.forceActiveFocus()
+        compare(d.promptId, e.prompt.id)
+        var e2 = openEditor("A {{X}} b", ["X"], {draft: d})
+        var f2 = textBox(e2)
+        compare(f2.text, "A abcdef b")
+        tryCompare(f2, "cursorPosition", 6)
+        compare(f2.selectionStart, 6)
+        compare(f2.selectionEnd, 8)
+        compare(e2.activeName, "X")
+        keyClick(Qt.Key_Left, Qt.ShiftModifier)
+        compare(f2.selectedText, "def", "the selection keeps its anchor and active end")
+        keyClick("x")
+        waitValue(e2, "X", "abcx")
         keyClick(Qt.Key_Z, Qt.ControlModifier)
-        compare(v2.text, "a", "undo after resume walks the draft's history")
-        e.destroy()
-        e2.destroy()
+        waitValue(e2, "X", "abcdef")
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        waitValue(e2, "X", "abcde")
     }
 
     function test_editor_draft_only_restores_its_own_prompt() {
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("A {{X}}", ["X"]),
-            draft: {promptId: "other/prompt.md", values: {X: "stale"},
-                    activeName: "X", cursor: 0, selection: null},
-            copier: null, colors: ({})
+        var e = openEditor("A {{X}}", ["X"], {
+            draft: {promptId: "other/prompt.md", values: {X: "stale"}, activeName: "X",
+                    cursor: 0, anchor: 0, histories: {}, redos: {}}
         })
-        verify(e)
-        e.openPrompt()
-        var v = findChild(e, "value0")
-        compare(v.text, "", "a draft for another prompt must not fill this one")
-        e.destroy()
+        compare(e.valueOf("X"), undefined, "a draft for another prompt must not fill this one")
+        compare(textBox(e).text, "A {{X}}")
     }
 
     function test_search_refresh_retains_selection() {
@@ -333,7 +475,7 @@ TestCase {
                 {id: "p1", title: "One", detail: "d", fileName: "", draft: false, snippet: ""},
                 {id: "p2", title: "Two", detail: "d", fileName: "", draft: false, snippet: ""}
             ],
-            draftPromptId: "", colors: ({}), query: ""
+            draftPromptId: "", query: ""
         })
         verify(s)
         s.selectedIndex = 1
@@ -350,7 +492,7 @@ TestCase {
         var e = createTemporaryObject(editorComp, tc, {
             width: 700, height: 500, visible: true,
             prompt: prompt("plain body", []),
-            draft: null, copier: null, colors: ({})
+            draft: null, copier: null
         })
         verify(e)
         var spy = spyComp.createObject(tc, {target: e, signalName: "copyRequested"})
@@ -374,106 +516,67 @@ TestCase {
     }
 
     function test_editor_empty_mirror_and_unset_count() {
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("{{X}} repeated {{X}} then {{Y}}", ["X", "Y"])
-        })
-        e.openPrompt()
+        var e = openEditor("{{X}} repeated {{X}} then {{Y}}", ["X", "Y"])
         e.setValue("X", "")
-        compare(findChild(e, "mirror0").text, "")
+        tryCompare(textBox(e), "text", " repeated  then {{Y}}")
         verify(hasText(e, "1 unset variable"), "present-empty values are not counted as unset")
         e.unsetValue("X")
-        compare(findChild(e, "mirror0").text, "{{X}}")
+        tryCompare(textBox(e), "text", "{{X}} repeated {{X}} then {{Y}}")
         verify(hasText(e, "2 unset variables"))
-        e.destroy()
     }
 
-    function test_editor_paste_multiline_and_mirror_click() {
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("A {{X}} mid {{Y}} end {{X}}", ["X", "Y"]),
-            draft: null, copier: null, colors: ({})
-        })
-        verify(e)
-        e.openPrompt()
-        var v = findChild(e, "value0")
-        v.forceActiveFocus()
-        v.text = "zz"
-        v.selectAll()
-        v.copy() // seed the real clipboard
-        v.text = ""
+    function test_editor_paste_multiline_and_enter() {
+        var e = openEditor("A {{X}} mid {{X}}", ["X"])
+        var f = textBox(e)
+        seedClipboard("zz\nyy")
         keyClick(Qt.Key_V, Qt.ControlModifier | Qt.ShiftModifier)
-        compare(v.text, "zz", "Ctrl+Shift+V pastes literally into a value")
+        waitValue(e, "X", "zz\nyy")
+        compare(f.text, "A zz\nyy mid zz\nyy", "a multi-line paste lands in the value and its mirror")
         keyClick(Qt.Key_Return)
-        compare(v.text, "zz\n", "Enter inserts a newline in a value")
-        var mir = findChild(e, "mirror0")
-        mouseClick(mir)
-        compare(e.activeName, "X", "clicking a mirror makes it the active value")
-        keyClick(Qt.Key_Tab)
-        compare(e.activeName, "Y", "next Tab goes to the next unique name")
-        var prose = textsUnder(e, "mid")
-        verify(prose.length > 0, "prose rendered")
-        var before = String(prose[0].text)
-        keyClick(Qt.Key_B)
-        compare(String(prose[0].text), before, "typing leaves the prose unchanged")
-        e.destroy()
+        waitValue(e, "X", "zz\nyy\n")
     }
 
-    function test_editor_right_click_paste() {
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("A {{X}}", ["X"]),
-            draft: null, copier: null, colors: ({})
-        })
-        verify(e)
-        e.openPrompt()
-        var v = findChild(e, "value0")
-        v.forceActiveFocus()
-        v.text = "clip"
-        v.selectAll()
-        v.copy()
-        v.text = ""
+    function test_editor_right_click_paste_and_disabled_undo() {
+        var e = openEditor("A {{X}} b", ["X"])
+        var f = textBox(e)
+        seedClipboard("clip")
+        var r = occurrence(e, "X", 0)
+        var rect = f.positionToRectangle(r.start + 2)
         // A synthetic right-click instantiates the attached context menu but
         // does not synthesize QContextMenuEvent, so it stays closed; open the
         // same TextEditingContextMenu a real right-click opens and trigger Paste.
-        mouseClick(v, v.width / 2, v.height / 2, Qt.RightButton)
-        tryVerify(function() { return v.ContextMenu && v.ContextMenu.menu !== null }, 1000)
-        var menu = v.ContextMenu.menu
-        verify(menu, "value field has an attached context menu")
+        mouseClick(f, rect.x + 1, rect.y + rect.height / 2, Qt.RightButton)
+        tryVerify(function() { return f.ContextMenu && f.ContextMenu.menu !== null }, 1000)
+        var menu = f.ContextMenu.menu
+        verify(menu, "the text box has an attached context menu")
         menu.open()
         tryVerify(function() { return menu.opened }, 500)
         var pasteItem = null
+        var undoItem = null
         for (var i = 0; i < menu.count; i++) {
             var it = menu.itemAt(i)
-            if (it && it.text === "Paste") { pasteItem = it; break }
+            if (it && it.text === "Paste") pasteItem = it
+            if (it && it.text === "Undo") undoItem = it
         }
         verify(pasteItem, "menu has Paste")
+        verify(!undoItem || !undoItem.enabled, "the menu's native Undo is disabled")
         if (pasteItem.action && typeof pasteItem.action.trigger === "function")
             pasteItem.action.trigger()
         else
             pasteItem.clicked()
-        tryVerify(function() { return v.text === "clip" }, 500)
-        compare(v.text, "clip", "right-click paste lands in the value")
-        e.destroy()
+        waitValue(e, "X", "clip")
+        compare(f.text, "A clip b", "right-click paste lands in the value")
     }
 
     function test_editor_copy_failure_keeps_draft() {
         var stub = failingCopierComponent.createObject(tc)
-        var e = createTemporaryObject(editorComp, tc, {
-            width: 700, height: 500, visible: true,
-            prompt: prompt("A {{X}}", ["X"]),
-            draft: null, copier: stub, colors: ({})
-        })
-        verify(e)
-        e.openPrompt()
-        var v = findChild(e, "value0")
-        v.forceActiveFocus()
-        v.text = "keepme"
+        var e = openEditor("A {{X}}", ["X"], {copier: stub})
+        typeText("keepme")
+        waitValue(e, "X", "keepme")
         keyClick(Qt.Key_C, Qt.ControlModifier)
         wait(50)
-        compare(v.text, "keepme", "a reported copy failure keeps the draft")
-        verify(hasText(e, "copy failed") || hasText(e, "failed"), "the failure is shown")
-        e.destroy()
+        compare(e.valueOf("X"), "keepme", "a reported copy failure keeps the draft")
+        verify(hasText(e, "copy failed"), "the failure is shown")
         stub.destroy()
     }
 
@@ -484,7 +587,7 @@ TestCase {
             width: 700, height: 500, visible: true,
             syncStatus: {authenticated: false, fix: "gh auth login"},
             lastPull: "", lastError: "", loadErrors: [],
-            selection: null, binds: [], repos: [], colors: ({})
+            selection: null, binds: [], repos: []
         })
         verify(s)
         verify(hasText(s, "gh auth login"), "logged-out status renders the fix")
@@ -501,7 +604,7 @@ TestCase {
                 {kind: "bundle", path: "prompts/a/b.md", line: null, message: "invalid UTF-8"},
                 {kind: "prompt", path: "prompts/a/c.md", line: 4, message: "duplicate key"}
             ],
-            selection: {repo: "Tamdoma/varhop-prompts"}, binds: [], repos: [], colors: ({})
+            selection: {repo: "Tamdoma/varhop-prompts"}, binds: [], repos: []
         })
         verify(s)
         verify(hasText(s, "ivanjuras"), "gh login shown")
@@ -520,7 +623,7 @@ TestCase {
             lastPull: "", lastError: "", loadErrors: [],
             selection: {repo: "a/b"},
             binds: [{modmask: 68, key: "P", description: "Power", submap: ""}],
-            repos: [], colors: ({})
+            repos: []
         })
         verify(s)
         var f = findChild(s, "chordField")
@@ -553,7 +656,7 @@ TestCase {
             width: 700, height: 500, visible: true,
             syncStatus: {authenticated: true, login: "u", scopes: []},
             lastPull: "", lastError: "", loadErrors: [],
-            selection: {repo: "a/b"}, binds: [], repos: [], colors: ({})
+            selection: {repo: "a/b"}, binds: [], repos: []
         })
         verify(s)
         var f = findChild(s, "repoField")
@@ -574,6 +677,197 @@ TestCase {
         s.destroy()
     }
 
+    // ------- Repository picker -------
+    // The picker is the repoField plus a bounded list (repoList, rows repoRow<i>
+    // in filtered order). `filteredRepos` is the shown list, `pickerIndex` the
+    // highlighted row or -1. `lookupDone(typed, fullName, repoId)` delivers a
+    // typed owner/repo lookup and emits lookupAccepted only if the field still
+    // holds the typed text.
+
+    function repoFixture() {
+        return [
+            {fullName: "Zed/zeta", id: 1, private: false},
+            {fullName: "ana/Čaj", id: 2, private: true},
+            {fullName: "Bob/caj-two", id: 3, private: false},
+            {fullName: "bob/caj", id: 4, private: false},
+            {fullName: "ab/c", id: 5, private: false},
+            {fullName: "b/c", id: 6, private: false}
+        ]
+    }
+
+    function openSettings(props) {
+        var init = {width: 700, height: 600, visible: true,
+            syncStatus: {authenticated: true, login: "u", scopes: []},
+            lastPull: "", lastError: "", loadErrors: [], selection: {repo: "bob/caj"},
+            binds: [], repos: repoFixture(), reposState: "ready"}
+        for (var k in props) init[k] = props[k]
+        var s = createTemporaryObject(settingsComp, tc, init)
+        verify(s)
+        var f = findChild(s, "repoField")
+        tryVerify(function() { return f.activeFocus }, 1000, "the picker field takes focus")
+        return s
+    }
+
+    function listed(s) {
+        return s.filteredRepos.map(function(r) { return r.fullName })
+    }
+
+    function highlighted(s) {
+        return s.pickerIndex < 0 ? "" : s.filteredRepos[s.pickerIndex].fullName
+    }
+
+    function test_picker_filters_in_stable_order_with_highlight() {
+        var s = openSettings({})
+        var f = findChild(s, "repoField")
+        var chosen = spyComp.createObject(tc, {target: s, signalName: "repoChosen"})
+        var typed = spyComp.createObject(tc, {target: s, signalName: "repoTyped"})
+        compare(listed(s), ["ab/c", "ana/Čaj", "b/c", "bob/caj", "Bob/caj-two", "Zed/zeta"],
+                "A to Z by lowercased fullName")
+        compare(s.pickerIndex, -1, "no highlight before typing or an arrow")
+        keyClick(Qt.Key_Return)
+        compare(chosen.count, 0, "Enter on an empty field does nothing")
+        compare(typed.count, 0)
+        typeText("caj")
+        compare(listed(s), ["ana/Čaj", "bob/caj", "Bob/caj-two"],
+                "case- and accent-insensitive substring, order kept")
+        compare(highlighted(s), "ana/Čaj", "without an exact match the first match is highlighted")
+        f.text = "B/C"
+        compare(listed(s), ["ab/c", "b/c", "bob/caj", "Bob/caj-two"])
+        compare(highlighted(s), "b/c", "the exact match is highlighted")
+        keyClick(Qt.Key_Down)
+        compare(highlighted(s), "bob/caj")
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Down)
+        compare(highlighted(s), "ab/c", "Down wraps")
+        keyClick(Qt.Key_Up)
+        compare(highlighted(s), "Bob/caj-two", "Up wraps")
+        keyClick(Qt.Key_Return)
+        compare(chosen.count, 1, "Enter takes the highlight")
+        compare(chosen.signalArguments[0][0], "Bob/caj-two")
+        compare(typed.count, 0)
+    }
+
+    function test_picker_lookup_and_state_lines() {
+        var s = openSettings({})
+        var f = findChild(s, "repoField")
+        var line = findChild(s, "repoStateLine")
+        verify(line, "the picker has a state line")
+        var typed = spyComp.createObject(tc, {target: s, signalName: "repoTyped"})
+        var accepted = spyComp.createObject(tc, {target: s, signalName: "lookupAccepted"})
+        var chosen = spyComp.createObject(tc, {target: s, signalName: "repoChosen"})
+        f.text = "Some/Other"
+        compare(listed(s).length, 0)
+        verify(line.visible && /looks up owner\/repo/i.test(line.text), "zero matches explain the lookup: " + line.text)
+        keyClick(Qt.Key_Return)
+        compare(typed.count, 1, "Enter with zero matches runs the lookup")
+        compare(typed.signalArguments[0][0], "Some/Other")
+        compare(chosen.count, 0)
+        f.text = "Some/Otherx"
+        s.lookupDone("Some/Other", "Some/Other", 99)
+        compare(accepted.count, 0, "a lookup for text no longer in the field is dropped")
+        f.text = "Some/Other"
+        s.lookupDone("Some/Other", "Some/Other", 99)
+        compare(accepted.count, 1, "a lookup for the unchanged field applies")
+        compare(accepted.signalArguments[0][0], "Some/Other")
+        compare(accepted.signalArguments[0][1], 99)
+        f.text = ""
+        s.reposState = "loading"
+        verify(line.visible && /loading/i.test(line.text), "loading line: " + line.text)
+        s.reposState = "failed"
+        verify(line.visible && /could not list/i.test(line.text), "could-not-list line: " + line.text)
+    }
+
+    function test_picker_is_one_tab_stop_with_bounded_rows() {
+        var many = []
+        for (var i = 0; i < 20; i++)
+            many.push({fullName: "org/repo" + (i < 10 ? "0" + i : i), id: 100 + i, private: false})
+        var s = openSettings({repos: many, selection: {repo: "org/repo03"}})
+        var f = findChild(s, "repoField")
+        var list = findChild(s, "repoList")
+        verify(list, "the picker list")
+        tryVerify(function() { return findChild(s, "repoRow3") !== null }, 2000)
+        var row0 = findChild(s, "repoRow0")
+        var shown = list.height / row0.height
+        verify(shown >= 7.5 && shown <= 8.5, "about 8 rows show, got " + shown)
+        verify(hasText(findChild(s, "repoRow3"), "current"), "the selected repo is marked current")
+        verify(!hasText(row0, "current"))
+        for (var k = 0; k < 13; k++) keyClick(Qt.Key_Down)
+        compare(s.pickerIndex, 12)
+        tryVerify(function() { return findChild(s, "repoRow12") !== null }, 2000)
+        var row12 = findChild(s, "repoRow12")
+        waitForRendering(list)
+        var y = row12.mapToItem(list, 0, 0).y
+        verify(y >= -0.5 && y + row12.height <= list.height + 0.5, "the highlight stays in view, row at " + y)
+        var chosen = spyComp.createObject(tc, {target: s, signalName: "repoChosen"})
+        mouseClick(row12)
+        compare(chosen.count, 1, "a click uses the repoChosen path")
+        compare(chosen.signalArguments[0][0], "org/repo12")
+        f.forceActiveFocus()
+        var before = f.text
+        keyClick(Qt.Key_Tab)
+        verify(!f.activeFocus, "Tab leaves the picker")
+        compare(f.text, before, "Tab inserts nothing")
+        for (var r = 0; r < 20; r++) {
+            var row = findChild(s, "repoRow" + r)
+            if (row) verify(!row.activeFocus, "rows are not separate Tab stops")
+        }
+    }
+
+    function test_picker_highlight_follows_repo_id_across_refresh() {
+        var s = openSettings({})
+        keyClick(Qt.Key_Down)
+        compare(highlighted(s), "ab/c", "an arrow shows the highlight without typing")
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Down)
+        compare(highlighted(s), "bob/caj")
+        var refreshed = repoFixture().concat([{fullName: "aaa/new", id: 7, private: false}])
+        s.repos = refreshed
+        compare(highlighted(s), "bob/caj", "the highlight follows the repo id across a refresh")
+        s.repos = refreshed.filter(function(r) { return r.id !== 4 })
+        compare(s.pickerIndex, -1, "the highlight clears when its repo is gone")
+    }
+
+    function test_picker_esc_clears_filter_first() {
+        var s = openSettings({})
+        var back = spyComp.createObject(tc, {target: s, signalName: "backRequested"})
+        keyClick("x")
+        keyClick(Qt.Key_Escape)
+        compare(findChild(s, "repoField").text, "", "Esc clears a non-empty filter")
+        compare(back.count, 0)
+        keyClick(Qt.Key_Escape)
+        compare(back.count, 1, "Esc on an empty filter keeps its meaning")
+    }
+
+    function test_settings_controls_reachable_by_tab_and_enter() {
+        var copied = []
+        var s = openSettings({libraryMismatch: "reconfirm: switching repos discards the current draft",
+                              copyText: function(t) { copied.push(t) }})
+        var confirm = spyComp.createObject(tc, {target: s, signalName: "confirmReimport"})
+        var sync = spyComp.createObject(tc, {target: s, signalName: "syncNow"})
+        var reset = spyComp.createObject(tc, {target: s, signalName: "resetUsage"})
+        function tabTo(name) {
+            var target = findChild(s, name)
+            verify(target && target.visible, name + " shows")
+            for (var i = 0; i < 12 && !target.activeFocus; i++) keyClick(Qt.Key_Tab)
+            verify(target.activeFocus, name + " is reachable by Tab")
+        }
+        tabTo("confirmReimportButton")
+        keyClick(Qt.Key_Return)
+        compare(confirm.count, 1)
+        tabTo("syncNowButton")
+        keyClick(Qt.Key_Enter)
+        compare(sync.count, 1)
+        tabTo("resetUsageButton")
+        keyClick(Qt.Key_Space)
+        compare(reset.count, 1)
+        findChild(s, "chordField").text = "SUPER + ALT + P"
+        tabTo("copyBindButton")
+        keyClick(Qt.Key_Return)
+        compare(copied.length, 1)
+        compare(copied[0], 'o.bind("SUPER + ALT + P", "Varhop prompts", { panel = "ivan.varhop" })')
+    }
+
     // ------- Plain text everywhere -------
 
     function test_plain_text_format() {
@@ -581,7 +875,7 @@ TestCase {
         var s = createTemporaryObject(searchComp, tc, {
             width: 700, height: 500, visible: true,
             rows: [{id: "p1", title: hostile, detail: hostile, fileName: "f.md", draft: false, snippet: hostile}],
-            draftPromptId: "", colors: ({}), query: ""
+            draftPromptId: "", query: ""
         })
         verify(s)
         var items = textsUnder(s, "<b>x</b>")
