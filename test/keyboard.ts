@@ -62,9 +62,11 @@ const inputEvent = (type: number, code: number, value: number): Uint8Array => {
   return bytes;
 };
 
+// ponytail: `-i 0` takes the first Hyprland instance, because checks run without
+// HYPRLAND_INSTANCE_SIGNATURE. A host with several instances needs the signature passed in.
 const hyprctlJson = <T>(args: string[]): T => {
-  const result: ReturnType<typeof Bun.spawnSync> = Bun.spawnSync({cmd: ["hyprctl", ...args, "-j"]});
-  if (result.exitCode !== 0) throw new Error(`hyprctl ${args.join(" ")} exited ${result.exitCode}: ${result.stderr}`);
+  const result: ReturnType<typeof Bun.spawnSync> = Bun.spawnSync({cmd: ["hyprctl", "-i", "0", ...args, "-j"], env: waylandEnv()});
+  if (result.exitCode !== 0) throw new Error(`hyprctl ${args.join(" ")} exited ${result.exitCode}: ${result.stdout}${result.stderr}`);
   return JSON.parse(result.stdout.toString()) as T;
 };
 
