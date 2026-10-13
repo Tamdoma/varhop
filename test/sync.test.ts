@@ -294,6 +294,18 @@ describe("repo states and file selection", () => {
     expect(staged.errors.map((e: any) => e.path)).toEqual(["prompts/c/bad.md"]);
   }, 60000);
 
+  test("repo with prompts/ but no usable markdown stages status no-prompts", () => {
+    const src = makeRepo({ "prompts/notes/draft.txt": "not markdown\n" });
+    const cache = tmp("varhop-cache-");
+    const r = run(fetchArgs(`file://${src}`, cache, 1));
+    expect(r.code).toBe(0);
+    const j = r.json();
+    expect(j.status).toBe("no-prompts");
+    const staged = JSON.parse(readFileSync(stagedPath(cache, 1), "utf8"));
+    expect(staged.status).toBe("no-prompts");
+    expect(staged.files).toEqual([]);
+  }, 60000);
+
   test("files deeper than two levels and files directly under prompts/ become error entries", () => {
     const src = makeRepo({
       "prompts/a/b/c/deep.md": "too deep\n",
