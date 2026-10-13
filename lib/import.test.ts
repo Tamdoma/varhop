@@ -141,3 +141,13 @@ test("a prompt carries names and precomputed folded search fields", () => {
   expect(p.search.subcategory).toBe("lint");
   expect(p.search.body).toBe("say {{a}} then {{b}}");
 });
+
+test("unknown metadata continuation lines are ignored without hiding known-key errors", () => {
+  const {r, p} = one(
+    "prompts/c/example.md",
+    "---\nfuture:\n  hint: keep\n  - example\nother:\n- ignored\ntitle: Known\ndescription: |\n---\nBody",
+  );
+  expect(p.title).toBe("Known");
+  expect(p.body).toBe("Body");
+  expect(r.errors.map((e) => e.line)).toEqual([8]);
+});
