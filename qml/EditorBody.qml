@@ -324,18 +324,24 @@ Item {
 
                     Text {
                         id: mir
+                        readonly property bool valueUnset: {
+                            root.valuesVersion
+                            return root._values[seg.name] === undefined
+                        }
                         visible: seg.kind === "token" && !isStop
+                        width: parent.width
+                        height: Math.max(20, implicitHeight)
                         objectName: (seg.kind === "token" && !isStop) ? "mirror" + (occurrenceIndex - 1) : ""
                         textFormat: Text.PlainText
                         text: {
                             root.valuesVersion
                             if (seg.kind !== "token") return ""
                             var v = root._values[seg.name]
-                            return (v !== undefined && v !== "") ? v : seg.raw
+                            return valueUnset ? seg.raw : v
                         }
-                        color: (root._values[seg.name] !== undefined && root._values[seg.name] !== "") ? root._fg : root._muted
+                        color: valueUnset ? root._muted : root._fg
                         font.pixelSize: 14
-                        font.italic: !(root._values[seg.name] !== undefined && root._values[seg.name] !== "")
+                        font.italic: valueUnset
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
@@ -348,6 +354,19 @@ Item {
                 }
             }
         }
+    }
+
+    Text {
+        anchors.bottom: parent.bottom
+        anchors.right: parent.right
+        textFormat: Text.PlainText
+        text: {
+            root.valuesVersion
+            var count = root.rebuiltText().unset.length
+            return count + (count === 1 ? " unset variable" : " unset variables")
+        }
+        color: root._muted
+        font.pixelSize: 12
     }
 
     Text {
