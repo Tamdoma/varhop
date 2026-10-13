@@ -1,4 +1,6 @@
-import {readdirSync} from "node:fs";
+import {closeSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync} from "node:fs";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
 
 type Selection = {kind: "absent"} | {kind: "data", mime: string, bytes: Buffer};
 
@@ -29,16 +31,28 @@ const readSelection = (args: string[], env: NodeJS.ProcessEnv): Selection => {
 };
 
 const restoreSelection = (args: string[], saved: Selection, env: NodeJS.ProcessEnv): void => {
-  const result: ReturnType<typeof Bun.spawnSync> = Bun.spawnSync({
-    cmd: ["wl-copy", ...args, ...(saved.kind === "absent" ? ["--clear"] : ["--type", saved.mime])],
-    env, stdin: saved.kind === "data" ? saved.bytes : "ignore", stdout: "ignore", stderr: "pipe",
-  });
-  if (result.exitCode !== 0)
-    throw new Error(`wl-copy ${args.join(" ")} restoration exited ${result.exitCode}: ${result.stderr}`);
-  const actual: Selection = readSelection(args, env);
-  const equal: boolean = saved.kind === "absent" ? actual.kind === "absent"
-    : actual.kind === "data" && saved.mime === actual.mime && saved.bytes.equals(actual.bytes);
-  if (!equal) throw new Error(`Clipboard restoration byte comparison failed for ${args.join(" ") || "clipboard"}`);
+  const directory: string = mkdtempSync(join(tmpdir(), "varhop-clipboard-"));
+  try {
+    const errorPath: string = join(directory, "stderr");
+    const errorFd: number = openSync(errorPath, "w");
+    try {
+      const result: Bun.SyncSubprocess<"ignore", number> = Bun.spawnSync({
+        cmd: ["wl-copy", ...args, ...(saved.kind === "absent" ? ["--clear"] : ["--type", saved.mime])],
+        env, stdin: saved.kind === "data" ? saved.bytes : "ignore", stdout: "ignore", stderr: errorFd,
+      });
+      if (result.exitCode !== 0)
+        throw new Error(`wl-copy ${args.join(" ")} restoration exited ${result.exitCode}: ${readFileSync(errorPath, "utf8")}`);
+      const actual: Selection = readSelection(args, env);
+      const equal: boolean = saved.kind === "absent" ? actual.kind === "absent"
+        : actual.kind === "data" && saved.mime === actual.mime && saved.bytes.equals(actual.bytes);
+      if (!equal)
+        throw new Error(`Clipboard restoration byte comparison failed for ${args.join(" ") || "clipboard"}: ${readFileSync(errorPath, "utf8")}`);
+    } finally {
+      closeSync(errorFd);
+    }
+  } finally {
+    rmSync(directory, {recursive: true});
+  }
 };
 
 export const withClipboardRestored = (run: () => void): void => {
