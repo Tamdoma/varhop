@@ -224,8 +224,10 @@ Item {
         var cmd = [syncBin, "sync", fullName, cachePath, "--generation", String(syncGen)]
         if (opts && opts.expect)
             cmd = cmd.concat(["--expect-account", String(opts.expect.accountId), "--expect-repo", String(opts.expect.repoId)])
+        console.log("varhop-syncstart " + cmd.join(" "))
         syncProc.command = cmd
         syncProc.running = true
+        console.log("varhop-syncrunning " + syncProc.running)
     }
 
     function chooseRepo(fullName, expect) {
@@ -359,7 +361,6 @@ Item {
                 try { root.syncStatus = JSON.parse(text) } catch (e) { root.syncStatus = ({}) }
             }
         }
-        onErrorOccurred: function(error) { console.log("varhop-proc status err=" + error) }
         onExited: function(code) { if (code !== 0) root.syncStatus = ({authenticated: false, fix: "gh auth login"}) }
     }
 
@@ -371,7 +372,6 @@ Item {
                 try { root.repos = JSON.parse(text).repos || [] } catch (e) { root.repos = [] }
             }
         }
-        onErrorOccurred: function(error) { console.log("varhop-proc repos err=" + error) }
         onExited: function(code) { if (code !== 0) root.repos = [] }
     }
 
@@ -381,14 +381,15 @@ Item {
         command: [root.syncBin, "repo", repoProc.typed]
         stdout: StdioCollector {
             onStreamFinished: {
+                console.log("varhop-repoout " + text)
                 try {
                     var r = JSON.parse(text)
                     if (r.fullName) root.chooseRepo(r.fullName, {accountId: r.accountId, repoId: r.id})
                 } catch (e) { root.lastError = "repo lookup failed" }
             }
         }
-        onErrorOccurred: function(error) { console.log("varhop-proc repo err=" + error) }
-        onExited: function(code) { if (code !== 0) root.lastError = "repo lookup failed" }
+        onStarted: console.log("varhop-repo start " + command.join(" "))
+        onExited: function(code) { console.log("varhop-repo exit " + code); if (code !== 0) root.lastError = "repo lookup failed" }
     }
 
     Process {
@@ -404,13 +405,13 @@ Item {
 
     Process {
         id: syncProc
+        onStarted: console.log("varhop-sync spawn")
         stdout: StdioCollector {
             onStreamFinished: {
                 try { syncProc.lastOut = JSON.parse(text) } catch (e) { syncProc.lastOut = null }
             }
         }
         property var lastOut: null
-        onErrorOccurred: function(error) { console.log("varhop-proc sync err=" + error); root.syncing = false }
         onExited: function(code, status) {
             var gen = root.pendingGen
             var out = lastOut
