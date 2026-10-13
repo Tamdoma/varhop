@@ -128,7 +128,6 @@ FocusScope {
     }
 
     function focusHeader() {
-        _bodyFocus = card.Window.activeFocusItem
         if (backButton.visible) backButton.forceActiveFocus(Qt.TabFocusReason)
         else settingsButton.forceActiveFocus(Qt.TabFocusReason)
     }
@@ -140,6 +139,14 @@ FocusScope {
     }
 
     onViewChanged: _bodyFocus = null
+
+    // Remember the body item that last held focus, whatever path (Ctrl+Tab,
+    // plain Tab, click) then moves focus into the header.
+    readonly property Item _focusNow: card.Window.activeFocusItem
+    on_FocusNowChanged: {
+        for (var it = _focusNow; it; it = it.parent)
+            if (it === bodyArea) { _bodyFocus = _focusNow; return }
+    }
 
     Keys.onPressed: function(event) {
         var ctrl = event.modifiers === Qt.ControlModifier
