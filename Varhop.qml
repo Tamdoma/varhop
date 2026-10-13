@@ -518,6 +518,7 @@ Item {
                 focus: true
 
                 Keys.onPressed: function(event) {
+                    console.log("varhop-key " + event.key + " mods=" + event.modifiers)
                     var v = root.view === "search" ? searchLoader.item
                         : root.view === "editor" ? editorLoader.item
                         : settingsLoader.item

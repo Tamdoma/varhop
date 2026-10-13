@@ -72,6 +72,8 @@ Item {
             height: 36
             text: root.query
             focus: true
+            onVisibleChanged: if (visible) forceActiveFocus()
+            Component.onCompleted: if (visible) forceActiveFocus()
             wrapMode: TextEdit.NoWrap
             color: root._fg
             selectionColor: root._selBg

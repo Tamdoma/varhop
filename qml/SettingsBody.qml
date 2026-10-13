@@ -190,6 +190,9 @@ Item {
                     objectName: "repoField"
                     width: parent.width
                     height: 34
+                    focus: true
+                    onVisibleChanged: if (visible) forceActiveFocus()
+                    Component.onCompleted: if (visible) forceActiveFocus()
                     wrapMode: TextEdit.NoWrap
                     color: root._fg
                     font.pixelSize: 13
