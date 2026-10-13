@@ -11,12 +11,16 @@ OUT=${5:?out path}
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
 
-BODY=$(printf 'word %.0s' $(seq 1 3000))
+printf -v BODY 'word %.0s' {1..4096}
 {
   echo -n '{"version":1,"generation":1,"repo":"Tamdoma/varhop-prompts","repoId":'"$RID"',"accountId":'"$AID"',"login":"'"$LOGIN"'","commit":"synthetic","fetchedAt":0,"status":"ok","slot":"a","files":['
   for i in $(seq 1 "$N"); do
     if [ "$i" -gt 1 ]; then echo -n ","; fi
-    if [ $((i % 2)) -eq 0 ]; then text="---\ntitle: Prompt $i\ndescription: synthetic row $i\n---\n$BODY"; else text="---\ntitle: Prompt $i\ndescription: synthetic row $i\n---\nbody $i {{A}}"; fi
+    if [ $((i % 2)) -eq 0 ]; then
+      printf -v text -- '---\ntitle: Prompt %s\ndescription: synthetic row %s\n---\n%s' "$i" "$i" "$BODY"
+    else
+      printf -v text -- '---\ntitle: Prompt %s\ndescription: synthetic row %s\n---\nbody %s {{A}}' "$i" "$i" "$i"
+    fi
     jq -nc --arg p "prompts/cat$((i % 10))/p$i.md" --arg t "$text" '{path:$p,text:$t}'
   done
   echo -n '],"errors":[]}'
