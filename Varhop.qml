@@ -167,6 +167,7 @@ Item {
     }
 
     function route() {
+        console.log("varhop-view " + view + " sel=" + (selection ? selection.repo : "none") + " draft=" + (draft ? draft.promptId : "none"))
         if (draft !== null) {
             var p = null
             for (var i = 0; i < library.prompts.length; i++)
@@ -183,6 +184,7 @@ Item {
     function open(payloadJson) {
         opened = true
         route()
+        console.log("varhop-view " + view)
         refreshStatus()
         if (!selection) refreshRepos()
         refreshBinds()
@@ -478,9 +480,9 @@ Item {
         WlrLayershell.namespace: "varhop"
 
         // First frame after a keystroke: log the search latency pair.
-        Connections {
-            target: panel
-            function onFrameSwapped() {
+        FrameAnimation {
+            running: root.opened
+            onTriggered: {
                 if (root.firstFramePending && root.lastKeyAt > 0) {
                     root.firstFramePending = false
                     console.log("varhop-search " + JSON.stringify({key: root.lastKeyAt, frame: Date.now()}))
