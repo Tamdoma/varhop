@@ -155,15 +155,26 @@ Item {
     }
 
     function refreshStatus() {
-        if (!statusProc.running) statusProc.running = true
+        if (!manifest || statusProc.running) return
+        statusProc.running = true
     }
 
     function refreshRepos() {
-        if (!reposProc.running) reposProc.running = true
+        if (!manifest || reposProc.running) return
+        reposProc.running = true
     }
 
     function refreshBinds() {
-        if (!bindsProc.running) bindsProc.running = true
+        if (!manifest || bindsProc.running) return
+        bindsProc.running = true
+    }
+
+    onManifestChanged: {
+        // Host injects manifest after construction; binaries depend on
+        // manifest.__sourceDir, so wait for it before spawning anything.
+        refreshStatus()
+        refreshRepos()
+        refreshBinds()
     }
 
     function route() {
@@ -384,7 +395,7 @@ Item {
                 console.log("varhop-repoout " + text)
                 try {
                     var r = JSON.parse(text)
-                    if (r.fullName) root.chooseRepo(r.fullName, {accountId: r.accountId, repoId: r.id})
+                    if (r.fullName) root.chooseRepo(r.fullName, {accountId: root.syncStatus ? root.syncStatus.accountId : null, repoId: r.id})
                 } catch (e) { root.lastError = "repo lookup failed" }
             }
         }
@@ -413,6 +424,7 @@ Item {
         }
         property var lastOut: null
         onExited: function(code, status) {
+            console.log("varhop-syncexit " + code + " out=" + JSON.stringify(lastOut))
             var gen = root.pendingGen
             var out = lastOut
             if (code === 0 && out) {
@@ -476,6 +488,12 @@ Item {
     Component.onCompleted: {
         mkdirProc.running = true
         refreshStatus()
+    }
+
+    onOpenedChanged: if (opened) {
+        refreshStatus()
+        refreshBinds()
+        if (!selection) refreshRepos()
     }
 
     // ---- overlay ----------------------------------------------------------------
