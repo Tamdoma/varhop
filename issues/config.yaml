@@ -8,7 +8,6 @@ slots:
 rebuttal: true
 fix_rounds: 3
 implement: subagents
-batch_limit: 3
 setup: bun install
 checks:
   test: bun test --pass-with-no-tests
