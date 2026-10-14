@@ -6,7 +6,6 @@ slots:
     model: claude-opus-5-5
     effort: medium
 rebuttal: true
-direct: false
 fix_rounds: 3
 implement: subagents
 batch_limit: 3
